@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carousel Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Left Panel - Slides */
+        .left-panel {
+            width: 160px;
+            background: #111;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            padding: 16px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-add {
+            width: 28px;
+            height: 28px;
+            background: #c8ff00;
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .slides-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .slide-thumb {
+            position: relative;
+            aspect-ratio: 4/5;
+            background: #222;
+            border-radius: 8px;
+            cursor: pointer;
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        
+        .slide-thumb.active {
+            border-color: #c8ff00;
+        }
+        
+        .slide-thumb-content {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .slide-thumb-number {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            background: rgba(0,0,0,0.8);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .slide-thumb-delete {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255,0,0,0.8);
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .slide-thumb:hover .slide-thumb-delete {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Center - Canvas */
+        .center-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+        }
+        
+        .toolbar {
+            padding: 12px 20px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .tool-btn {
+            padding: 8px 14px;
+            background: #252525;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        
+        .tool-btn:hover {
+            background: #333;
+        }
+        
+        .tool-btn.active {
+            background: #c8ff00;
+            color: #000;
+        }
+        
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: #333;
+            margin: 0 8px;
+        }
+        
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            overflow: auto;
+        }
+        
+        .canvas {
+            width: 453px;
+            height: 567px;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            background: #fff;
+        }
+        
+        .canvas-bg {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .canvas-overlay {
+            position: absolute;
+            inset: 0;
+        }
+        
+        .canvas-element {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+        }
+        
+        .canvas-element.selected {
+            outline: 2px solid #c8ff00;
+            outline-offset: 2px;
+        }
+        
+        .canvas-element.text-element {
+            white-space: pre-wrap;
+        }
+        
+        .canvas-element.highlight-element {
+            display: inline-block;
+        }
+        
+        .canvas-nav {
+            padding: 16px;
+            background: #111;
+            border-top: 1px solid #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .nav-btn {
+            width: 36px;
+            height: 36px;
+            background: #252525;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .nav-text {
+            font-size: 14px;
+            color: #888;
+        }
+        
+        /* Right Panel - Properties */
+        .right-panel {
+            width: 300px;
+            background: #111;
+            border-left: 1px solid #222;
+            overflow-y: auto;
+        }
+        
+        .props-section {
+            padding: 16px;
+            border-bottom: 1px solid #222;
+        }
+        
+        .props-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        
+        .props-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .props-field {
+            flex: 1;
+        }
+        
+        .props-label {
+            display: block;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        
+        .props-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        
+        .props-input:focus {
+            outline: none;
+            border-color: #c8ff00;
+        }
+        
+        .props-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .props-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .props-color {
+            width: 100%;
+            height: 40px;
+            padding: 4px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .props-range {
+            width: 100%;
+            accent-color: #c8ff00;
+        }
+        
+        .props-btn-group {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .props-btn {
+            flex: 1;
+            padding: 10px;
+            background: #252525;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .props-btn.active {
+            background: #c8ff00;
+            color: #000;
+        }
+        
+        .btn-delete {
+            width: 100%;
+            padding: 10px;
+            background: #ff4444;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 12px;
+        }
+        
+        /* Top Bar */
+        .top-bar {
+            padding: 12px 20px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #c8ff00, #a0cc00);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #000;
+        }
+        
+        .template-name {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            width: 200px;
+        }
+        
+        .template-name:focus {
+            outline: none;
+        }
+        
+        .top-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-secondary {
+            padding: 10px 16px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            padding: 10px 20px;
+            background: #c8ff00;
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        /* Templates Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.show {
+            display: flex;
+        }
+        
+        .modal {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 24px;
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .template-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .template-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #252525;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .template-item:hover {
+            background: #333;
+        }
+        
+        .template-item-name {
+            font-weight: 500;
+        }
+        
+        .template-item-date {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 24px;
+            background: #252525;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+            z-index: 1001;
+        }
+        
+        .toast.show {
+            display: block;
+        }
+        
+        .toast.success {
+            background: #1a472a;
+            border: 1px solid #2d5a3c;
+        }
+        
+        .toast.error {
+            background: #4a1a1a;
+            border: 1px solid #6a2a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Left Panel - Slides -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <span class="panel-title">Слайды</span>
+                <button class="btn-add" onclick="addSlide()">+</button>
+            </div>
+            <div class="slides-list" id="slidesList"></div>
+        </div>
+        
+        <!-- Center -->
+        <div class="center-panel">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="logo">
+                    <div class="logo-icon">C</div>
+                    <input type="text" class="template-name" id="templateName" value="Новый шаблон" placeholder="Название шаблона">
+                </div>
+                <div class="top-actions">
+                    <button class="btn-secondary" onclick="showTemplates()">📁 Шаблоны</button>
+                    <button class="btn-secondary" onclick="exportTemplate()">📤 Экспорт</button>
+                    <button class="btn-primary" onclick="saveTemplate()">💾 Сохранить</button>
+                </div>
+            </div>
+            
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <button class="tool-btn" onclick="addElement('text')">T Текст</button>
+                <button class="tool-btn" onclick="addElement('highlight')">▣ Выделение</button>
+                <button class="tool-btn" onclick="addElement('variable')">{ } Переменная</button>
+                <div class="toolbar-separator"></div>
+                <button class="tool-btn" onclick="duplicateSlide()">⧉ Копировать</button>
+            </div>
+            
+            <!-- Canvas -->
+            <div class="canvas-area">
+                <div class="canvas" id="canvas"></div>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="canvas-nav">
+                <button class="nav-btn" onclick="prevSlide()">←</button>
+                <span class="nav-text" id="navText">1 / 1</span>
+                <button class="nav-btn" onclick="nextSlide()">→</button>
+            </div>
+        </div>
+        
+        <!-- Right Panel - Properties -->
+        <div class="right-panel">
+            <!-- Slide Background -->
+            <div class="props-section">
+                <div class="props-section-title">Фон слайда</div>
+                
+                <div class="props-field">
+                    <label class="props-label">Тип фона</label>
+                    <div class="props-btn-group">
+                        <button class="props-btn" id="bgTypeColor" onclick="setBgType('color')">Цвет</button>
+                        <button class="props-btn" id="bgTypeImage" onclick="setBgType('image')">Фото</button>
+                    </div>
+                </div>
+                
+                <div class="props-field" id="bgColorField">
+                    <label class="props-label">Цвет фона</label>
+                    <input type="color" class="props-color" id="bgColor" value="#ffffff" onchange="updateBg()">
+                </div>
+                
+                <div class="props-field" id="bgImageField" style="display:none">
+                    <label class="props-label">URL фото (или переменная {PHOTO})</label>
+                    <input type="text" class="props-input" id="bgImage" placeholder="https://... или {PHOTO}" onchange="updateBg()">
+                </div>
+                
+                <div class="props-field" id="overlayField" style="display:none">
+                    <label class="props-label">Затемнение: <span id="overlayValue">40</span>%</label>
+                    <input type="range" class="props-range" id="bgOverlay" min="0" max="100" value="40" onchange="updateBg()">
+                </div>
+                
+                <div class="props-field" id="overlayTypeField" style="display:none">
+                    <label class="props-label">Тип затемнения</label>
+                    <div class="props-btn-group">
+                        <button class="props-btn" id="overlayTypeFull" onclick="setOverlayType('full')">Полное</button>
+                        <button class="props-btn" id="overlayTypeGradient" onclick="setOverlayType('gradient')">Градиент ↑</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Element Properties -->
+            <div class="props-section" id="elementProps" style="display:none">
+                <div class="props-section-title">Элемент: <span id="elementType"></span></div>
+                
+                <div class="props-field" id="textContentField">
+                    <label class="props-label">Текст (или переменная {TITLE})</label>
+                    <textarea class="props-input props-textarea" id="textContent" onchange="updateElement()"></textarea>
+                </div>
+                
+                <div class="props-row">
+                    <div class="props-field">
+                        <label class="props-label">Шрифт</label>
+                        <select class="props-select" id="fontFamily" onchange="updateElement()">
+                            <option value="Inter">Inter</option>
+                            <option value="Montserrat">Montserrat</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="Oswald">Oswald</option>
+                            <option value="Playfair Display">Playfair Display</option>
+                        </select>
+                    </div>
+                    <div class="props-field">
+                        <label class="props-label">Размер</label>
+                        <input type="number" class="props-input" id="fontSize" value="48" onchange="updateElement()">
+                    </div>
+                </div>
+                
+                <div class="props-row">
+                    <div class="props-field">
+                        <label class="props-label">Жирность</label>
+                        <select class="props-select" id="fontWeight" onchange="updateElement()">
+                            <option value="300">Light</option>
+                            <option value="400">Regular</option>
+                            <option value="500">Medium</option>
+                            <option value="600">SemiBold</option>
+                            <option value="700">Bold</option>
+                            <option value="800">ExtraBold</option>
+                            <option value="900">Black</option>
+                        </select>
+                    </div>
+                    <div class="props-field">
+                        <label class="props-label">Межстрочный</label>
+                        <input type="number" class="props-input" id="lineHeight" value="1.1" step="0.05" onchange="updateElement()">
+                    </div>
+                </div>
+                
+                <div class="props-row">
+                    <div class="props-field">
+                        <label class="props-label">Цвет текста</label>
+                        <input type="color" class="props-color" id="textColor" value="#ffffff" onchange="updateElement()">
+                    </div>
+                    <div class="props-field" id="bgColorElementField">
+                        <label class="props-label">Цвет фона</label>
+                        <input type="color" class="props-color" id="elementBgColor" value="#c8ff00" onchange="updateElement()">
+                    </div>
+                </div>
+                
+                <div class="props-field">
+                    <label class="props-label">Выравнивание</label>
+                    <div class="props-btn-group">
+                        <button class="props-btn" id="alignLeft" onclick="setAlign('left')">←</button>
+                        <button class="props-btn" id="alignCenter" onclick="setAlign('center')">↔</button>
+                        <button class="props-btn" id="alignRight" onclick="setAlign('right')">→</button>
+                    </div>
+                </div>
+                
+                <div class="props-row">
+                    <div class="props-field">
+                        <label class="props-label">X</label>
+                        <input type="number" class="props-input" id="posX" value="0" onchange="updateElement()">
+                    </div>
+                    <div class="props-field">
+                        <label class="props-label">Y</label>
+                        <input type="number" class="props-input" id="posY" value="0" onchange="updateElement()">
+                    </div>
+                </div>
+                
+                <div class="props-field">
+                    <label class="props-label">Макс. ширина</label>
+                    <input type="number" class="props-input" id="maxWidth" placeholder="Авто" onchange="updateElement()">
+                </div>
+                
+                <button class="btn-delete" onclick="deleteElement()">🗑 Удалить элемент</button>
+            </div>
+            
+            <!-- Global Settings -->
+            <div class="props-section">
+                <div class="props-section-title">Настройки карусели</div>
+                
+                <div class="props-field">
+                    <label class="props-label">Никнейм</label>
+                    <input type="text" class="props-input" id="globalUsername" value="@kamilgazizovv" onchange="updateGlobal()">
+                </div>
+                
+                <div class="props-field">
+                    <label class="props-label">Всего слайдов (для нумерации)</label>
+                    <input type="number" class="props-input" id="globalTotalSlides" value="10" min="1" max="20" onchange="updateGlobal()">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Templates Modal -->
+    <div class="modal-overlay" id="templatesModal">
+        <div class="modal">
+            <div class="modal-title">Сохранённые шаблоны</div>
+            <div class="template-list" id="templateList"></div>
+            <button class="btn-secondary" style="width:100%;margin-top:16px" onclick="hideTemplates()">Закрыть</button>
+        </div>
+    </div>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ========== CONSTANTS ==========
+        const CANVAS_WIDTH = 1080;
+        const CANVAS_HEIGHT = 1350;
+        const SCALE = 453 / 1080;
+        
+        const API_URL = window.location.origin;
+        
+        // ========== STATE ==========
+        let state = {
+            templateName: 'Новый шаблон',
+            username: '@kamilgazizovv',
+            totalSlides: 10,
+            slides: [],
+            currentSlideIndex: 0,
+            selectedElementId: null,
+        };
+        
+        // ========== INIT ==========
+        function init() {
+            // Создаём первый слайд
+            addSlide();
+            render();
+            
+            // Загружаем список шаблонов
+            loadTemplatesList();
+        }
+        
+        // ========== SLIDES ==========
+        function createSlide(num) {
+            return {
+                id: 'slide_' + Date.now(),
+                number: num,
+                background: {
+                    type: 'color',
+                    color: '#ffffff',
+                    image: '',
+                    overlay: 40,
+                    overlayType: 'full', // 'full' or 'gradient'
+                },
+                elements: [
+                    // Username
+                    {
+                        id: 'username_' + num,
+                        type: 'text',
+                        content: '{USERNAME}',
+                        x: 48,
+                        y: 48,
+                        fontFamily: 'Inter',
+                        fontSize: 26,
+                        fontWeight: '400',
+                        color: '#000000',
+                        textAlign: 'left',
+                        lineHeight: 1.2,
+                    },
+                    // Slide number
+                    {
+                        id: 'slidenum_' + num,
+                        type: 'text',
+                        content: '{SLIDE_NUM}',
+                        x: 1032,
+                        y: 48,
+                        fontFamily: 'Inter',
+                        fontSize: 26,
+                        fontWeight: '400',
+                        color: '#000000',
+                        textAlign: 'right',
+                        lineHeight: 1.2,
+                    },
+                ],
+            };
+        }
+        
+        function addSlide() {
+            const num = state.slides.length + 1;
+            state.slides.push(createSlide(num));
+            state.currentSlideIndex = state.slides.length - 1;
+            state.selectedElementId = null;
+            render();
+        }
+        
+        function deleteSlide(index) {
+            if (state.slides.length <= 1) return;
+            state.slides.splice(index, 1);
+            // Renumber
+            state.slides.forEach((s, i) => s.number = i + 1);
+            state.currentSlideIndex = Math.min(state.currentSlideIndex, state.slides.length - 1);
+            state.selectedElementId = null;
+            render();
+        }
+        
+        function duplicateSlide() {
+            const current = state.slides[state.currentSlideIndex];
+            const copy = JSON.parse(JSON.stringify(current));
+            copy.id = 'slide_' + Date.now();
+            copy.number = state.slides.length + 1;
+            copy.elements = copy.elements.map(el => ({
+                ...el,
+                id: el.id.split('_')[0] + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
+            }));
+            state.slides.splice(state.currentSlideIndex + 1, 0, copy);
+            state.currentSlideIndex++;
+            render();
+        }
+        
+        function selectSlide(index) {
+            state.currentSlideIndex = index;
+            state.selectedElementId = null;
+            render();
+        }
+        
+        function prevSlide() {
+            if (state.currentSlideIndex > 0) {
+                state.currentSlideIndex--;
+                state.selectedElementId = null;
+                render();
+            }
+        }
+        
+        function nextSlide() {
+            if (state.currentSlideIndex < state.slides.length - 1) {
+                state.currentSlideIndex++;
+                state.selectedElementId = null;
+                render();
+            }
+        }
+        
+        // ========== ELEMENTS ==========
+        function addElement(type) {
+            const slide = state.slides[state.currentSlideIndex];
+            const id = type + '_' + Date.now();
+            
+            const element = {
+                id,
+                type,
+                content: type === 'variable' ? '{CONTENT}' : (type === 'highlight' ? 'Выделение' : 'Новый текст'),
+                x: 48,
+                y: 400,
+                fontFamily: 'Inter',
+                fontSize: type === 'highlight' ? 64 : 48,
+                fontWeight: type === 'highlight' ? '700' : '600',
+                color: type === 'highlight' ? '#000000' : '#000000',
+                textAlign: 'left',
+                lineHeight: 1.1,
+                maxWidth: 900,
+            };
+            
+            if (type === 'highlight') {
+                element.bgColor = '#c8ff00';
+                element.paddingX = 16;
+                element.paddingY = 6;
+            }
+            
+            slide.elements.push(element);
+            state.selectedElementId = id;
+            render();
+        }
+        
+        function selectElement(id, event) {
+            if (event) event.stopPropagation();
+            state.selectedElementId = id;
+            render();
+        }
+        
+        function deleteElement() {
+            if (!state.selectedElementId) return;
+            const slide = state.slides[state.currentSlideIndex];
+            slide.elements = slide.elements.filter(el => el.id !== state.selectedElementId);
+            state.selectedElementId = null;
+            render();
+        }
+        
+        function updateElement() {
+            if (!state.selectedElementId) return;
+            const slide = state.slides[state.currentSlideIndex];
+            const element = slide.elements.find(el => el.id === state.selectedElementId);
+            if (!element) return;
+            
+            element.content = document.getElementById('textContent').value;
+            element.fontFamily = document.getElementById('fontFamily').value;
+            element.fontSize = parseInt(document.getElementById('fontSize').value) || 48;
+            element.fontWeight = document.getElementById('fontWeight').value;
+            element.color = document.getElementById('textColor').value;
+            element.lineHeight = parseFloat(document.getElementById('lineHeight').value) || 1.1;
+            element.x = parseInt(document.getElementById('posX').value) || 0;
+            element.y = parseInt(document.getElementById('posY').value) || 0;
+            element.maxWidth = parseInt(document.getElementById('maxWidth').value) || null;
+            
+            if (element.type === 'highlight') {
+                element.bgColor = document.getElementById('elementBgColor').value;
+            }
+            
+            renderCanvas();
+        }
+        
+        function setAlign(align) {
+            if (!state.selectedElementId) return;
+            const slide = state.slides[state.currentSlideIndex];
+            const element = slide.elements.find(el => el.id === state.selectedElementId);
+            if (element) {
+                element.textAlign = align;
+                render();
+            }
+        }
+        
+        // ========== BACKGROUND ==========
+        function setBgType(type) {
+            const slide = state.slides[state.currentSlideIndex];
+            slide.background.type = type;
+            render();
+        }
+        
+        function setOverlayType(type) {
+            const slide = state.slides[state.currentSlideIndex];
+            slide.background.overlayType = type;
+            render();
+        }
+        
+        function updateBg() {
+            const slide = state.slides[state.currentSlideIndex];
+            slide.background.color = document.getElementById('bgColor').value;
+            slide.background.image = document.getElementById('bgImage').value;
+            slide.background.overlay = parseInt(document.getElementById('bgOverlay').value);
+            document.getElementById('overlayValue').textContent = slide.background.overlay;
+            renderCanvas();
+        }
+        
+        function updateGlobal() {
+            state.username = document.getElementById('globalUsername').value;
+            state.totalSlides = parseInt(document.getElementById('globalTotalSlides').value) || 10;
+            renderCanvas();
+        }
+        
+        // ========== DRAG & DROP ==========
+        let dragging = null;
+        let dragOffset = { x: 0, y: 0 };
+        
+        function startDrag(id, event) {
+            event.stopPropagation();
+            state.selectedElementId = id;
+            dragging = id;
+            
+            const canvas = document.getElementById('canvas');
+            const rect = canvas.getBoundingClientRect();
+            const slide = state.slides[state.currentSlideIndex];
+            const element = slide.elements.find(el => el.id === id);
+            
+            dragOffset = {
+                x: event.clientX - rect.left - element.x * SCALE,
+                y: event.clientY - rect.top - element.y * SCALE,
+            };
+            
+            render();
+        }
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            
+            const canvas = document.getElementById('canvas');
+            const rect = canvas.getBoundingClientRect();
+            const slide = state.slides[state.currentSlideIndex];
+            const element = slide.elements.find(el => el.id === dragging);
+            
+            if (element) {
+                element.x = Math.round((e.clientX - rect.left - dragOffset.x) / SCALE);
+                element.y = Math.round((e.clientY - rect.top - dragOffset.y) / SCALE);
+                element.x = Math.max(0, Math.min(element.x, CANVAS_WIDTH - 50));
+                element.y = Math.max(0, Math.min(element.y, CANVAS_HEIGHT - 50));
+                renderCanvas();
+                updatePropsPanel();
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            dragging = null;
+        });
+        
+        // ========== RENDER ==========
+        function render() {
+            renderSlidesList();
+            renderCanvas();
+            renderPropsPanel();
+            updateNav();
+        }
+        
+        function renderSlidesList() {
+            const container = document.getElementById('slidesList');
+            container.innerHTML = state.slides.map((slide, i) => `
+                <div class="slide-thumb ${i === state.currentSlideIndex ? 'active' : ''}" onclick="selectSlide(${i})">
+                    <div class="slide-thumb-content" style="background: ${slide.background.type === 'image' && slide.background.image && !slide.background.image.startsWith('{') ? `url(${slide.background.image})` : slide.background.color}"></div>
+                    <span class="slide-thumb-number">${i + 1}</span>
+                    <button class="slide-thumb-delete" onclick="event.stopPropagation(); deleteSlide(${i})">×</button>
+                </div>
+            `).join('');
+        }
+        
+        function renderCanvas() {
+            const canvas = document.getElementById('canvas');
+            const slide = state.slides[state.currentSlideIndex];
+            const bg = slide.background;
+            
+            // Background
+            let bgStyle = bg.color;
+            let overlayHtml = '';
+            
+            if (bg.type === 'image' && bg.image && !bg.image.startsWith('{')) {
+                bgStyle = `url(${bg.image}) center/cover`;
+                
+                if (bg.overlayType === 'gradient') {
+                    overlayHtml = `<div class="canvas-overlay" style="background: linear-gradient(to top, rgba(0,0,0,${bg.overlay/100}) 0%, rgba(0,0,0,0) 60%)"></div>`;
+                } else {
+                    overlayHtml = `<div class="canvas-overlay" style="background: rgba(0,0,0,${bg.overlay/100})"></div>`;
+                }
+            }
+            
+            // Elements
+            const elementsHtml = slide.elements.map(el => {
+                const isSelected = el.id === state.selectedElementId;
+                
+                // Replace variables for preview
+                let content = el.content;
+                content = content.replace('{USERNAME}', state.username);
+                content = content.replace('{SLIDE_NUM}', `${slide.number}/${state.totalSlides}`);
+                
+                let style = `
+                    left: ${el.x * SCALE}px;
+                    top: ${el.y * SCALE}px;
+                    font-family: '${el.fontFamily}', sans-serif;
+                    font-size: ${el.fontSize * SCALE}px;
+                    font-weight: ${el.fontWeight};
+                    color: ${el.color};
+                    text-align: ${el.textAlign};
+                    line-height: ${el.lineHeight};
+                    ${el.maxWidth ? `max-width: ${el.maxWidth * SCALE}px;` : ''}
+                `;
+                
+                if (el.type === 'highlight') {
+                    style += `
+                        background-color: ${el.bgColor};
+                        padding: ${(el.paddingY || 6) * SCALE}px ${(el.paddingX || 16) * SCALE}px;
+                    `;
+                }
+                
+                // Right align positioning
+                if (el.textAlign === 'right') {
+                    style += `transform: translateX(-100%);`;
+                } else if (el.textAlign === 'center') {
+                    style += `transform: translateX(-50%);`;
+                }
+                
+                return `
+                    <div class="canvas-element ${el.type}-element ${isSelected ? 'selected' : ''}" 
+                         style="${style}"
+                         onclick="selectElement('${el.id}', event)"
+                         onmousedown="startDrag('${el.id}', event)">
+                        ${content.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+            }).join('');
+            
+            canvas.innerHTML = `
+                <div class="canvas-bg" style="background: ${bgStyle}"></div>
+                ${overlayHtml}
+                ${elementsHtml}
+            `;
+        }
+        
+        function renderPropsPanel() {
+            const slide = state.slides[state.currentSlideIndex];
+            const bg = slide.background;
+            
+            // Background type buttons
+            document.getElementById('bgTypeColor').classList.toggle('active', bg.type === 'color');
+            document.getElementById('bgTypeImage').classList.toggle('active', bg.type === 'image');
+            
+            // Show/hide fields
+            document.getElementById('bgColorField').style.display = bg.type === 'color' ? 'block' : 'none';
+            document.getElementById('bgImageField').style.display = bg.type === 'image' ? 'block' : 'none';
+            document.getElementById('overlayField').style.display = bg.type === 'image' ? 'block' : 'none';
+            document.getElementById('overlayTypeField').style.display = bg.type === 'image' ? 'block' : 'none';
+            
+            // Values
+            document.getElementById('bgColor').value = bg.color;
+            document.getElementById('bgImage').value = bg.image;
+            document.getElementById('bgOverlay').value = bg.overlay;
+            document.getElementById('overlayValue').textContent = bg.overlay;
+            
+            // Overlay type buttons
+            document.getElementById('overlayTypeFull').classList.toggle('active', bg.overlayType === 'full');
+            document.getElementById('overlayTypeGradient').classList.toggle('active', bg.overlayType === 'gradient');
+            
+            // Global
+            document.getElementById('globalUsername').value = state.username;
+            document.getElementById('globalTotalSlides').value = state.totalSlides;
+            
+            // Element props
+            updatePropsPanel();
+        }
+        
+        function updatePropsPanel() {
+            const elementProps = document.getElementById('elementProps');
+            
+            if (!state.selectedElementId) {
+                elementProps.style.display = 'none';
+                return;
+            }
+            
+            const slide = state.slides[state.currentSlideIndex];
+            const element = slide.elements.find(el => el.id === state.selectedElementId);
+            
+            if (!element) {
+                elementProps.style.display = 'none';
+                return;
+            }
+            
+            elementProps.style.display = 'block';
+            document.getElementById('elementType').textContent = 
+                element.type === 'highlight' ? 'Выделение' : 
+                element.type === 'variable' ? 'Переменная' : 'Текст';
+            
+            document.getElementById('textContent').value = element.content;
+            document.getElementById('fontFamily').value = element.fontFamily;
+            document.getElementById('fontSize').value = element.fontSize;
+            document.getElementById('fontWeight').value = element.fontWeight;
+            document.getElementById('textColor').value = element.color;
+            document.getElementById('lineHeight').value = element.lineHeight;
+            document.getElementById('posX').value = element.x;
+            document.getElementById('posY').value = element.y;
+            document.getElementById('maxWidth').value = element.maxWidth || '';
+            
+            // Alignment buttons
+            document.getElementById('alignLeft').classList.toggle('active', element.textAlign === 'left');
+            document.getElementById('alignCenter').classList.toggle('active', element.textAlign === 'center');
+            document.getElementById('alignRight').classList.toggle('active', element.textAlign === 'right');
+            
+            // Highlight bg color
+            const bgColorField = document.getElementById('bgColorElementField');
+            bgColorField.style.display = element.type === 'highlight' ? 'block' : 'none';
+            if (element.type === 'highlight') {
+                document.getElementById('elementBgColor').value = element.bgColor || '#c8ff00';
+            }
+        }
+        
+        function updateNav() {
+            document.getElementById('navText').textContent = `${state.currentSlideIndex + 1} / ${state.slides.length}`;
+        }
+        
+        // ========== TEMPLATES ==========
+        async function saveTemplate() {
+            state.templateName = document.getElementById('templateName').value || 'Новый шаблон';
+            
+            const template = {
+                name: state.templateName,
+                username: state.username,
+                totalSlides: state.totalSlides,
+                slides: state.slides,
+                createdAt: new Date().toISOString(),
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/templates`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(template),
+                });
+                
+                if (response.ok) {
+                    showToast('Шаблон сохранён!', 'success');
+                    loadTemplatesList();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (e) {
+                // Save locally
+                const templates = JSON.parse(localStorage.getItem('carousel_templates') || '{}');
+                templates[state.templateName] = template;
+                localStorage.setItem('carousel_templates', JSON.stringify(templates));
+                showToast('Сохранено локально', 'success');
+            }
+        }
+        
+        async function loadTemplatesList() {
+            const list = document.getElementById('templateList');
+            let templates = [];
+            
+            try {
+                const response = await fetch(`${API_URL}/templates`);
+                if (response.ok) {
+                    const data = await response.json();
+                    templates = data.templates || [];
+                }
+            } catch (e) {
+                // Load from localStorage
+                const local = JSON.parse(localStorage.getItem('carousel_templates') || '{}');
+                templates = Object.values(local);
+            }
+            
+            if (templates.length === 0) {
+                list.innerHTML = '<div style="color:#666;text-align:center;padding:20px">Нет сохранённых шаблонов</div>';
+            } else {
+                list.innerHTML = templates.map(t => `
+                    <div class="template-item" onclick="loadTemplate('${t.name}')">
+                        <span class="template-item-name">${t.name}</span>
+                        <span class="template-item-date">${new Date(t.createdAt).toLocaleDateString()}</span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        async function loadTemplate(name) {
+            try {
+                const response = await fetch(`${API_URL}/templates/${encodeURIComponent(name)}`);
+                if (response.ok) {
+                    const template = await response.json();
+                    applyTemplate(template);
+                    hideTemplates();
+                    return;
+                }
+            } catch (e) {}
+            
+            // Try localStorage
+            const local = JSON.parse(localStorage.getItem('carousel_templates') || '{}');
+            if (local[name]) {
+                applyTemplate(local[name]);
+                hideTemplates();
+            }
+        }
+        
+        function applyTemplate(template) {
+            state.templateName = template.name;
+            state.username = template.username || '@kamilgazizovv';
+            state.totalSlides = template.totalSlides || 10;
+            state.slides = template.slides;
+            state.currentSlideIndex = 0;
+            state.selectedElementId = null;
+            
+            document.getElementById('templateName').value = state.templateName;
+            render();
+            showToast('Шаблон загружен', 'success');
+        }
+        
+        function exportTemplate() {
+            state.templateName = document.getElementById('templateName').value || 'template';
+            
+            const template = {
+                name: state.templateName,
+                username: state.username,
+                totalSlides: state.totalSlides,
+                slides: state.slides,
+            };
+            
+            const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${state.templateName}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function showTemplates() {
+            document.getElementById('templatesModal').classList.add('show');
+            loadTemplatesList();
+        }
+        
+        function hideTemplates() {
+            document.getElementById('templatesModal').classList.remove('show');
+        }
+        
+        // ========== TOAST ==========
+        function showToast(message, type = '') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show ' + type;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        // ========== INIT ==========
+        init();
+    </script>
+</body>
+</html>
