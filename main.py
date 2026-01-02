@@ -1,7 +1,7 @@
 """
-Carousel Generator API v3
-=========================
-Полноценный генератор с визуальным редактором и шаблонами
+Carousel Studio API v4
+======================
+Полноценный генератор каруселей с визуальным редактором
 
 Запуск:
   pip install -r requirements.txt
@@ -26,7 +26,7 @@ import io
 import re
 from datetime import datetime
 
-app = FastAPI(title="Carousel Generator", version="3.0")
+app = FastAPI(title="Carousel Studio", version="4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,78 +35,72 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Директории
+# Directories
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 os.makedirs("fonts", exist_ok=True)
 os.makedirs("output", exist_ok=True)
 
-# Монтируем статику
+# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Размеры
-CANVAS_WIDTH = 1080
-CANVAS_HEIGHT = 1350
+# Canvas dimensions
+CANVAS_W = 1080
+CANVAS_H = 1350
 
 
-# ============== MODELS ==============
+# ==================== MODELS ====================
+
+class SlideData(BaseModel):
+    slide: Dict[str, Any]
+    settings: Dict[str, Any]
+    slideNumber: int
+
 
 class GenerateRequest(BaseModel):
-    """Запрос на генерацию карусели"""
     template_name: str
-    variables: Dict[str, str] = {}
-    # Например: {"PHOTO": "https://...", "TITLE": "Заголовок", "CONTENT": "Текст"}
+    slides: Optional[List[Dict[str, Any]]] = None
 
 
 class TemplateData(BaseModel):
-    """Данные шаблона"""
     name: str
-    username: str = "@kamilgazizovv"
-    totalSlides: int = 10
+    settings: Dict[str, Any] = {}
     slides: List[Dict[str, Any]]
     createdAt: Optional[str] = None
 
 
-# ============== GENERATOR ==============
+# ==================== GENERATOR ====================
 
-class CarouselGenerator:
+class SlideRenderer:
     def __init__(self):
         self.font_cache = {}
-        
-    def get_font(self, family: str, size: int, weight: str = "400") -> ImageFont.FreeTypeFont:
-        """Получить шрифт"""
-        # Маппинг весов на файлы
+    
+    def get_font(self, family: str, size: int, weight: str = '400') -> ImageFont.FreeTypeFont:
+        """Get font with caching"""
         weight_map = {
-            "300": "Light",
-            "400": "Regular",
-            "500": "Medium",
-            "600": "SemiBold",
-            "700": "Bold",
-            "800": "ExtraBold",
-            "900": "Black",
+            '300': 'Light', '400': 'Regular', '500': 'Medium',
+            '600': 'SemiBold', '700': 'Bold', '800': 'ExtraBold', '900': 'Black',
         }
-        
-        weight_name = weight_map.get(str(weight), "Regular")
+        weight_name = weight_map.get(str(weight), 'Regular')
         key = f"{family}_{size}_{weight_name}"
         
         if key not in self.font_cache:
-            # Пробуем разные пути
             paths = [
                 f"fonts/{family}-{weight_name}.ttf",
-                f"fonts/{family}_{weight_name}.ttf",
                 f"fonts/{family.replace(' ', '')}-{weight_name}.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             ]
             
-            if weight_name in ["Bold", "ExtraBold", "Black", "SemiBold"]:
-                paths.insert(0, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+            # Fallback to system fonts
+            if weight_name in ['Bold', 'ExtraBold', 'Black', 'SemiBold']:
+                paths.append("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+            paths.append("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
             
             for path in paths:
                 if os.path.exists(path):
                     try:
                         self.font_cache[key] = ImageFont.truetype(path, size)
                         break
-                    except:
+                    except Exception:
                         continue
             
             if key not in self.font_cache:
@@ -115,18 +109,16 @@ class CarouselGenerator:
         return self.font_cache[key]
     
     def load_image(self, source: str) -> Optional[Image.Image]:
-        """Загрузить изображение из URL или base64"""
+        """Load image from URL or base64"""
         if not source:
             return None
-            
+        
         try:
             if source.startswith('data:'):
-                # Base64
                 header, data = source.split(',', 1)
                 img_data = base64.b64decode(data)
                 return Image.open(io.BytesIO(img_data))
             elif source.startswith('http'):
-                # URL
                 response = requests.get(source, timeout=30)
                 response.raise_for_status()
                 return Image.open(io.BytesIO(response.content))
@@ -134,240 +126,215 @@ class CarouselGenerator:
             print(f"Error loading image: {e}")
         return None
     
-    def create_background(self, slide_bg: dict, variables: dict) -> Image.Image:
-        """Создать фон слайда"""
-        bg_type = slide_bg.get('type', 'color')
-        bg_color = slide_bg.get('color', '#ffffff')
-        bg_image = slide_bg.get('image', '')
-        overlay = slide_bg.get('overlay', 0)
-        overlay_type = slide_bg.get('overlayType', 'full')
+    def create_background(self, bg: dict) -> Image.Image:
+        """Create slide background"""
+        canvas = Image.new('RGB', (CANVAS_W, CANVAS_H), bg.get('color', '#ffffff'))
         
-        # Заменяем переменные
-        if bg_image.startswith('{') and bg_image.endswith('}'):
-            var_name = bg_image[1:-1]
-            bg_image = variables.get(var_name, '')
-        
-        # Создаём canvas
-        canvas = Image.new('RGB', (CANVAS_WIDTH, CANVAS_HEIGHT), bg_color)
-        
-        # Если есть изображение
-        if bg_type == 'image' and bg_image:
-            img = self.load_image(bg_image)
+        if bg.get('type') == 'photo' and bg.get('photo'):
+            img = self.load_image(bg['photo'])
             if img:
-                # Cover - масштабируем и обрезаем
+                # Get position and zoom
+                pos = bg.get('photoPosition', {'x': 50, 'y': 50})
+                zoom = bg.get('photoZoom', 1)
+                
+                # Calculate dimensions
                 img_ratio = img.width / img.height
-                canvas_ratio = CANVAS_WIDTH / CANVAS_HEIGHT
+                canvas_ratio = CANVAS_W / CANVAS_H
                 
                 if img_ratio > canvas_ratio:
-                    new_height = CANVAS_HEIGHT
+                    new_height = int(CANVAS_H * zoom)
                     new_width = int(new_height * img_ratio)
                 else:
-                    new_width = CANVAS_WIDTH
+                    new_width = int(CANVAS_W * zoom)
                     new_height = int(new_width / img_ratio)
                 
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 
-                # Центрируем
-                left = (new_width - CANVAS_WIDTH) // 2
-                top = (new_height - CANVAS_HEIGHT) // 2
-                img = img.crop((left, top, left + CANVAS_WIDTH, top + CANVAS_HEIGHT))
+                # Position based on percentage
+                max_offset_x = max(0, new_width - CANVAS_W)
+                max_offset_y = max(0, new_height - CANVAS_H)
+                
+                offset_x = int(max_offset_x * pos['x'] / 100)
+                offset_y = int(max_offset_y * pos['y'] / 100)
+                
+                img = img.crop((offset_x, offset_y, offset_x + CANVAS_W, offset_y + CANVAS_H))
                 
                 if img.mode != 'RGB':
                     img = img.convert('RGB')
                 
                 canvas = img
                 
-                # Затемнение
+                # Apply overlay
+                overlay = bg.get('overlay', 0)
                 if overlay > 0:
                     canvas = canvas.convert('RGBA')
+                    overlay_type = bg.get('overlayType', 'full')
                     
                     if overlay_type == 'gradient':
-                        # Градиент снизу вверх
-                        gradient = Image.new('RGBA', (CANVAS_WIDTH, CANVAS_HEIGHT), (0, 0, 0, 0))
+                        gradient = Image.new('RGBA', (CANVAS_W, CANVAS_H), (0, 0, 0, 0))
                         draw = ImageDraw.Draw(gradient)
                         
-                        for y in range(CANVAS_HEIGHT):
-                            # Градиент от 60% высоты до низа
-                            if y > CANVAS_HEIGHT * 0.4:
-                                progress = (y - CANVAS_HEIGHT * 0.4) / (CANVAS_HEIGHT * 0.6)
+                        for y in range(CANVAS_H):
+                            if y > CANVAS_H * 0.4:
+                                progress = (y - CANVAS_H * 0.4) / (CANVAS_H * 0.6)
                                 alpha = int(255 * overlay / 100 * progress)
-                                draw.line([(0, y), (CANVAS_WIDTH, y)], fill=(0, 0, 0, alpha))
+                                draw.line([(0, y), (CANVAS_W, y)], fill=(0, 0, 0, alpha))
                         
                         canvas = Image.alpha_composite(canvas, gradient)
                     else:
-                        # Полное затемнение
-                        overlay_layer = Image.new('RGBA', (CANVAS_WIDTH, CANVAS_HEIGHT), (0, 0, 0, int(255 * overlay / 100)))
+                        overlay_layer = Image.new('RGBA', (CANVAS_W, CANVAS_H), (0, 0, 0, int(255 * overlay / 100)))
                         canvas = Image.alpha_composite(canvas, overlay_layer)
                     
                     canvas = canvas.convert('RGB')
         
         return canvas
     
-    def draw_text_element(self, canvas: Image.Image, element: dict, variables: dict, 
-                         slide_num: int, total_slides: int, username: str):
-        """Отрисовать текстовый элемент"""
-        draw = ImageDraw.Draw(canvas)
+    def parse_color(self, color: str) -> tuple:
+        """Parse hex color to RGB tuple"""
+        color = color.lstrip('#')
+        return tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+    
+    def draw_text_element(self, img: Image.Image, el: dict, settings: dict, slide_num: int):
+        """Draw text element with highlight support"""
+        draw = ImageDraw.Draw(img)
         
-        content = element.get('content', '')
-        x = element.get('x', 0)
-        y = element.get('y', 0)
-        font_family = element.get('fontFamily', 'Inter')
-        font_size = element.get('fontSize', 48)
-        font_weight = element.get('fontWeight', '400')
-        color = element.get('color', '#000000')
-        text_align = element.get('textAlign', 'left')
-        line_height = element.get('lineHeight', 1.2)
-        max_width = element.get('maxWidth')
+        content = el.get('content', '')
+        x = el.get('x', 0)
+        y = el.get('y', 0)
+        font_family = el.get('fontFamily', 'Inter')
+        font_size = el.get('fontSize', 48)
+        font_weight = el.get('fontWeight', '400')
+        color = el.get('color', '#000000')
+        highlight_color = el.get('highlightColor', '#c8ff00')
+        opacity = el.get('opacity', 100) / 100
+        line_height = el.get('lineHeight', 1.2)
+        max_width = el.get('maxWidth')
+        align = el.get('align', 'left')
         
-        # Заменяем переменные
-        content = content.replace('{USERNAME}', username)
-        content = content.replace('{SLIDE_NUM}', f"{slide_num}/{total_slides}")
-        
-        # Заменяем кастомные переменные
-        for var_name, var_value in variables.items():
-            content = content.replace(f'{{{var_name}}}', str(var_value))
-        
-        # Если после замены остались переменные в {} — пропускаем элемент
-        if re.search(r'\{[^}]+\}', content):
-            return
+        # Replace system values
+        if el.get('type') == 'username':
+            content = settings.get('username', '@username')
+        elif el.get('type') == 'slidenum':
+            content = f"{slide_num}/{settings.get('totalSlides', 10)}"
         
         font = self.get_font(font_family, font_size, font_weight)
+        base_color = self.parse_color(color)
+        hl_color = self.parse_color(highlight_color)
         
-        # Перенос текста
+        # Apply opacity
+        base_color = tuple(int(c * opacity) for c in base_color)
+        hl_color = tuple(int(c * opacity) for c in hl_color)
+        
+        # Split content into segments (normal and highlighted)
+        segments = []
+        pattern = r'\*([^*]+)\*'
+        last_end = 0
+        
+        for match in re.finditer(pattern, content):
+            if match.start() > last_end:
+                segments.append({'text': content[last_end:match.start()], 'highlight': False})
+            segments.append({'text': match.group(1), 'highlight': True})
+            last_end = match.end()
+        
+        if last_end < len(content):
+            segments.append({'text': content[last_end:], 'highlight': False})
+        
+        if not segments:
+            segments = [{'text': content, 'highlight': False}]
+        
+        # Word wrap and render
         lines = []
-        for paragraph in content.split('\n'):
-            if max_width:
-                words = paragraph.split()
-                current_line = []
-                
-                for word in words:
-                    current_line.append(word)
-                    test = ' '.join(current_line)
-                    bbox = draw.textbbox((0, 0), test, font=font)
-                    
-                    if bbox[2] > max_width and len(current_line) > 1:
-                        current_line.pop()
-                        lines.append(' '.join(current_line))
-                        current_line = [word]
-                
-                if current_line:
-                    lines.append(' '.join(current_line))
-            else:
-                lines.append(paragraph)
+        current_line = []
+        current_line_segments = []
         
-        # Отрисовка
-        current_y = y
-        for line in lines:
-            line_x = x
-            
-            if text_align in ['center', 'right']:
-                bbox = draw.textbbox((0, 0), line, font=font)
-                line_width = bbox[2] - bbox[0]
+        for seg in segments:
+            words = seg['text'].replace('\n', ' \n ').split(' ')
+            for word in words:
+                if word == '\n':
+                    lines.append(current_line_segments)
+                    current_line = []
+                    current_line_segments = []
+                    continue
                 
-                if text_align == 'right':
-                    line_x = x - line_width
-                elif text_align == 'center':
-                    line_x = x - line_width // 2
+                if not word:
+                    continue
+                
+                test_line = current_line + [word]
+                test_text = ' '.join(test_line)
+                bbox = draw.textbbox((0, 0), test_text, font=font)
+                
+                if max_width and bbox[2] > max_width and current_line:
+                    lines.append(current_line_segments)
+                    current_line = [word]
+                    current_line_segments = [{'text': word, 'highlight': seg['highlight']}]
+                else:
+                    if current_line:
+                        current_line_segments.append({'text': ' ', 'highlight': False})
+                    current_line.append(word)
+                    current_line_segments.append({'text': word, 'highlight': seg['highlight']})
+        
+        if current_line_segments:
+            lines.append(current_line_segments)
+        
+        # Render lines
+        current_y = y
+        for line_segments in lines:
+            # Calculate line width for alignment
+            line_text = ''.join(s['text'] for s in line_segments)
+            bbox = draw.textbbox((0, 0), line_text, font=font)
+            line_width = bbox[2] - bbox[0]
             
-            draw.text((line_x, current_y), line, font=font, fill=color)
+            if align == 'right':
+                current_x = x - line_width
+            elif align == 'center':
+                current_x = x - line_width // 2
+            else:
+                current_x = x
+            
+            # Draw each segment
+            for seg in line_segments:
+                text = seg['text']
+                col = hl_color if seg['highlight'] else base_color
+                draw.text((current_x, current_y), text, font=font, fill=col)
+                
+                bbox = draw.textbbox((0, 0), text, font=font)
+                current_x += bbox[2] - bbox[0]
+            
             current_y += int(font_size * line_height)
     
-    def draw_highlight_element(self, canvas: Image.Image, element: dict, variables: dict,
-                               slide_num: int, total_slides: int, username: str):
-        """Отрисовать выделенный текст с фоном"""
-        draw = ImageDraw.Draw(canvas)
+    def render_slide(self, slide: dict, settings: dict, slide_num: int) -> Image.Image:
+        """Render a single slide"""
+        # Create background
+        canvas = self.create_background(slide.get('background', {}))
         
-        content = element.get('content', '')
-        x = element.get('x', 0)
-        y = element.get('y', 0)
-        font_family = element.get('fontFamily', 'Inter')
-        font_size = element.get('fontSize', 64)
-        font_weight = element.get('fontWeight', '700')
-        color = element.get('color', '#000000')
-        bg_color = element.get('bgColor', '#c8ff00')
-        padding_x = element.get('paddingX', 16)
-        padding_y = element.get('paddingY', 6)
-        
-        # Заменяем переменные
-        content = content.replace('{USERNAME}', username)
-        content = content.replace('{SLIDE_NUM}', f"{slide_num}/{total_slides}")
-        
-        for var_name, var_value in variables.items():
-            content = content.replace(f'{{{var_name}}}', str(var_value))
-        
-        if re.search(r'\{[^}]+\}', content):
-            return
-        
-        font = self.get_font(font_family, font_size, font_weight)
-        
-        # Размер текста
-        bbox = draw.textbbox((0, 0), content, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        
-        # Фон
-        draw.rectangle([
-            x - padding_x,
-            y - padding_y,
-            x + text_width + padding_x,
-            y + text_height + padding_y
-        ], fill=bg_color)
-        
-        # Текст
-        draw.text((x, y), content, font=font, fill=color)
-    
-    def generate_slide(self, slide: dict, variables: dict, slide_num: int, 
-                       total_slides: int, username: str) -> Image.Image:
-        """Генерация одного слайда"""
-        # Фон
-        canvas = self.create_background(slide.get('background', {}), variables)
-        
-        # Элементы
-        for element in slide.get('elements', []):
-            el_type = element.get('type', 'text')
-            
-            if el_type == 'highlight':
-                self.draw_highlight_element(canvas, element, variables, slide_num, total_slides, username)
-            else:
-                self.draw_text_element(canvas, element, variables, slide_num, total_slides, username)
+        # Draw elements
+        for el in slide.get('elements', []):
+            self.draw_text_element(canvas, el, settings, slide_num)
         
         return canvas
-    
-    def generate(self, template: dict, variables: dict) -> List[Image.Image]:
-        """Генерация всей карусели"""
-        images = []
-        
-        username = template.get('username', '@kamilgazizovv')
-        total_slides = template.get('totalSlides', len(template.get('slides', [])))
-        
-        for i, slide in enumerate(template.get('slides', [])):
-            img = self.generate_slide(slide, variables, i + 1, total_slides, username)
-            images.append(img)
-        
-        return images
 
 
-generator = CarouselGenerator()
+renderer = SlideRenderer()
 
 
-# ============== ROUTES ==============
+# ==================== ROUTES ====================
 
 @app.get("/")
 async def index():
-    """Веб-редактор"""
+    """Serve web editor"""
     return FileResponse("static/index.html")
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "version": "3.0", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "version": "4.0", "timestamp": datetime.now().isoformat()}
 
 
 # Templates CRUD
 
 @app.get("/templates")
 async def list_templates():
-    """Список шаблонов"""
+    """List all templates"""
     templates = []
     
     for filename in os.listdir("templates"):
@@ -380,7 +347,7 @@ async def list_templates():
                         "createdAt": data.get('createdAt', ''),
                         "slidesCount": len(data.get('slides', [])),
                     })
-            except:
+            except Exception:
                 pass
     
     return {"templates": templates}
@@ -388,8 +355,9 @@ async def list_templates():
 
 @app.get("/templates/{name}")
 async def get_template(name: str):
-    """Получить шаблон"""
-    path = f"templates/{name}.json"
+    """Get template by name"""
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
+    path = f"templates/{safe_name}.json"
     
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Template not found")
@@ -400,11 +368,10 @@ async def get_template(name: str):
 
 @app.post("/templates")
 async def save_template(template: TemplateData):
-    """Сохранить шаблон"""
+    """Save template"""
     template_dict = template.dict()
     template_dict['createdAt'] = datetime.now().isoformat()
     
-    # Безопасное имя файла
     safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', template.name)
     path = f"templates/{safe_name}.json"
     
@@ -416,8 +383,9 @@ async def save_template(template: TemplateData):
 
 @app.delete("/templates/{name}")
 async def delete_template(name: str):
-    """Удалить шаблон"""
-    path = f"templates/{name}.json"
+    """Delete template"""
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
+    path = f"templates/{safe_name}.json"
     
     if os.path.exists(path):
         os.remove(path)
@@ -426,25 +394,42 @@ async def delete_template(name: str):
     raise HTTPException(status_code=404, detail="Template not found")
 
 
-# Generation
+# Rendering
+
+@app.post("/render-slide")
+async def render_slide(data: SlideData):
+    """Render a single slide to PNG"""
+    try:
+        img = renderer.render_slide(data.slide, data.settings, data.slideNumber)
+        
+        # Convert to base64
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG", quality=95)
+        b64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return {
+            "success": True,
+            "base64": f"data:image/png;base64,{b64}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/generate")
 async def generate_carousel(request: GenerateRequest):
     """
-    Генерация карусели из шаблона
+    Generate carousel from template
     
-    Пример:
+    Example request:
     {
-        "template_name": "Мой шаблон",
-        "variables": {
-            "PHOTO": "https://example.com/photo.jpg",
-            "TITLE": "Заголовок",
-            "CONTENT": "Текст контента",
-            "HIGHLIGHT": "Выделение"
-        }
+        "template_name": "My Template",
+        "slides": [
+            {"TITLE": "Custom title", "DESCRIPTION": "Custom desc", "PHOTO": "https://..."},
+            {"TITLE": "Slide 2 title"}
+        ]
     }
     """
-    # Загружаем шаблон
+    # Load template
     safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', request.template_name)
     path = f"templates/{safe_name}.json"
     
@@ -454,43 +439,64 @@ async def generate_carousel(request: GenerateRequest):
     with open(path, 'r', encoding='utf-8') as f:
         template = json.load(f)
     
-    # Генерируем
-    try:
-        images = generator.generate(template, request.variables)
-        
-        results = []
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        for i, img in enumerate(images):
-            filename = f"carousel_{timestamp}_{i+1}.png"
-            filepath = f"output/{filename}"
-            img.save(filepath, "PNG", quality=95)
-            
-            # Base64
-            buffer = io.BytesIO()
-            img.save(buffer, format="PNG")
-            b64 = base64.b64encode(buffer.getvalue()).decode()
-            
-            results.append({
-                "slide_number": i + 1,
-                "filename": filename,
-                "url": f"/output/{filename}",
-                "base64": f"data:image/png;base64,{b64}"
-            })
-        
-        return {
-            "success": True,
-            "message": f"Создано {len(images)} слайдов",
-            "slides": results
-        }
+    settings = template.get('settings', {})
+    slides = template.get('slides', [])
     
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # Apply variables from request
+    if request.slides:
+        for i, slide_vars in enumerate(request.slides):
+            if i < len(slides):
+                slide = slides[i]
+                
+                # Update photo if provided
+                if 'PHOTO' in slide_vars:
+                    slide['background']['photo'] = slide_vars['PHOTO']
+                    slide['background']['type'] = 'photo'
+                
+                # Update elements
+                for el in slide.get('elements', []):
+                    var_name = el.get('varName', '')
+                    if var_name and var_name in slide_vars:
+                        el['content'] = slide_vars[var_name]
+                    
+                    # Check for highlight color
+                    if f"{var_name}_COLOR" in slide_vars:
+                        el['highlightColor'] = slide_vars[f"{var_name}_COLOR"]
+    
+    # Render all slides
+    results = []
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    for i, slide in enumerate(slides):
+        img = renderer.render_slide(slide, settings, i + 1)
+        
+        # Save file
+        filename = f"carousel_{timestamp}_{i+1}.png"
+        filepath = f"output/{filename}"
+        img.save(filepath, "PNG", quality=95)
+        
+        # Convert to base64
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        b64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        results.append({
+            "slide_number": i + 1,
+            "filename": filename,
+            "url": f"/output/{filename}",
+            "base64": f"data:image/png;base64,{b64}"
+        })
+    
+    return {
+        "success": True,
+        "message": f"Сгенерировано {len(results)} слайдов",
+        "slides": results
+    }
 
 
 @app.get("/output/{filename}")
 async def get_output(filename: str):
-    """Получить сгенерированный файл"""
+    """Get generated file"""
     path = f"output/{filename}"
     if os.path.exists(path):
         return FileResponse(path, media_type="image/png")
