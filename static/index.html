@@ -1039,13 +1039,13 @@
             return {
                 id: 'slide_' + Date.now() + '_' + num,
                 background: {
-                    type: 'color', // 'color' or 'photo'
+                    type: 'color',
                     color: '#f5f5f5',
                     photo: '',
-                    photoPosition: { x: 50, y: 50 }, // percent
+                    photoPosition: { x: 50, y: 50 },
                     photoZoom: 1,
-                    overlay: 0,
-                    overlayType: 'full', // 'full' or 'gradient'
+                    overlay: 40,
+                    overlayType: 'gradient',
                 },
                 elements: [
                     {
@@ -1423,10 +1423,14 @@
             if (bg.type === 'photo' && bg.photo) {
                 const pos = bg.photoPosition || { x: 50, y: 50 };
                 const zoom = bg.photoZoom || 1;
+                // Используем cover и смещение для точного соответствия серверному рендерингу
+                const scale = 100 * zoom;
                 bgHtml = `<div class="canvas-bg" style="
                     background-image: url(${bg.photo});
                     background-position: ${pos.x}% ${pos.y}%;
-                    background-size: ${100 * zoom}%;
+                    background-size: cover;
+                    transform: scale(${zoom});
+                    transform-origin: ${pos.x}% ${pos.y}%;
                 " onmousedown="startPhotoDrag(event)"></div>`;
                 
                 if (bg.overlay > 0) {

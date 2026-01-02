@@ -173,33 +173,34 @@ class SlideRenderer:
                 zoom = bg.get('photoZoom', 1)
                 zoom = max(1, zoom)
                 
+                # Сначала масштабируем как cover (заполняем весь canvas)
                 img_ratio = img.width / img.height
                 canvas_ratio = CANVAS_W / CANVAS_H
                 
                 if img_ratio > canvas_ratio:
-                    new_height = int(CANVAS_H * zoom)
-                    new_width = int(new_height * img_ratio)
+                    # Изображение шире - подгоняем по высоте
+                    base_height = CANVAS_H
+                    base_width = int(base_height * img_ratio)
                 else:
-                    new_width = int(CANVAS_W * zoom)
-                    new_height = int(new_width / img_ratio)
+                    # Изображение выше - подгоняем по ширине
+                    base_width = CANVAS_W
+                    base_height = int(base_width / img_ratio)
                 
-                if new_width < CANVAS_W:
-                    scale = CANVAS_W / new_width
-                    new_width = CANVAS_W
-                    new_height = int(new_height * scale)
-                if new_height < CANVAS_H:
-                    scale = CANVAS_H / new_height
-                    new_height = CANVAS_H
-                    new_width = int(new_width * scale)
+                # Применяем zoom
+                new_width = int(base_width * zoom)
+                new_height = int(base_height * zoom)
                 
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 
+                # Вычисляем смещение на основе позиции (0-100%)
+                # pos.x = 50 означает центр, pos.x = 0 - левый край, pos.x = 100 - правый край
                 max_offset_x = max(0, new_width - CANVAS_W)
                 max_offset_y = max(0, new_height - CANVAS_H)
                 
                 offset_x = int(max_offset_x * pos.get('x', 50) / 100)
                 offset_y = int(max_offset_y * pos.get('y', 50) / 100)
                 
+                # Обрезаем до размера canvas
                 img = img.crop((offset_x, offset_y, offset_x + CANVAS_W, offset_y + CANVAS_H))
                 
                 if img.mode != 'RGB':
@@ -207,23 +208,31 @@ class SlideRenderer:
                 
                 canvas = img
                 
+                # Затемнение
                 overlay = bg.get('overlay', 0)
                 if overlay > 0:
                     canvas = canvas.convert('RGBA')
-                    overlay_type = bg.get('overlayType', 'full')
+                    overlay_type = bg.get('overlayType', 'gradient')
                     
                     if overlay_type == 'gradient':
+                        # Градиент снизу вверх до 60%
                         gradient = Image.new('RGBA', (CANVAS_W, CANVAS_H), (0, 0, 0, 0))
                         draw = ImageDraw.Draw(gradient)
                         
-                        start_y = int(CANVAS_H * 0.4)
-                        for y in range(start_y, CANVAS_H):
-                            progress = (y - start_y) / (CANVAS_H - start_y)
-                            alpha = int(255 * overlay / 100 * progress)
-                            draw.line([(0, y), (CANVAS_W, y)], fill=(0, 0, 0, alpha))
+                        # Градиент от низа (100%) до 40% высоты (0% прозрачности)
+                        for y in range(CANVAS_H):
+                            # Прогресс от 0 (верх) до 1 (низ)
+                            progress_from_bottom = y / CANVAS_H
+                            # Градиент начинается с 40% высоты
+                            if progress_from_bottom > 0.4:
+                                # Нормализуем: 0.4->0, 1.0->1
+                                gradient_progress = (progress_from_bottom - 0.4) / 0.6
+                                alpha = int(255 * overlay / 100 * gradient_progress)
+                                draw.line([(0, y), (CANVAS_W, y)], fill=(0, 0, 0, alpha))
                         
                         canvas = Image.alpha_composite(canvas, gradient)
                     else:
+                        # Полное затемнение
                         alpha = int(255 * overlay / 100)
                         overlay_layer = Image.new('RGBA', (CANVAS_W, CANVAS_H), (0, 0, 0, alpha))
                         canvas = Image.alpha_composite(canvas, overlay_layer)
