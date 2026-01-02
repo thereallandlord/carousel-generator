@@ -2,1874 +2,573 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Carousel Studio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=PT+Sans:wght@400;700&family=Nunito:wght@300;400;500;600;700;800;900&family=Raleway:wght@300;400;500;600;700;800;900&family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carousel Studio v5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #111111;
-            --bg-tertiary: #1a1a1a;
-            --bg-hover: #222222;
-            --border: #2a2a2a;
-            --text-primary: #ffffff;
-            --text-secondary: #888888;
-            --text-muted: #555555;
-            --accent: #c8ff00;
-            --accent-hover: #d4ff33;
-            --danger: #ff4444;
-            --success: #44ff88;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* ========== LAYOUT ========== */
-        .app {
-            display: flex;
-            height: 100vh;
-        }
-
-        /* ========== LEFT SIDEBAR - SLIDES ========== */
-        .sidebar-left {
-            width: 180px;
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
-
-        .sidebar-header {
-            padding: 20px 16px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .sidebar-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--accent);
-            border: none;
-            border-radius: 8px;
-            color: #000;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .btn-icon:hover {
-            background: var(--accent-hover);
-            transform: scale(1.05);
-        }
-
-        .slides-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .slide-item {
-            position: relative;
-            aspect-ratio: 4/5;
-            background: var(--bg-tertiary);
-            border-radius: 12px;
-            cursor: pointer;
-            overflow: hidden;
-            border: 3px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .slide-item:hover {
-            border-color: var(--border);
-        }
-
-        .slide-item.active {
-            border-color: var(--accent);
-        }
-
-        .slide-item-bg {
-            position: absolute;
-            inset: 0;
-            background-size: cover;
-            background-position: center;
-        }
-
-        .slide-item-number {
-            position: absolute;
-            bottom: 6px;
-            left: 6px;
-            background: rgba(0,0,0,0.8);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .slide-item-actions {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            display: flex;
-            gap: 4px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .slide-item:hover .slide-item-actions {
-            opacity: 1;
-        }
-
-        .slide-item-btn {
-            width: 26px;
-            height: 26px;
-            background: rgba(0,0,0,0.8);
-            border: none;
-            border-radius: 6px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .slide-item-btn.delete:hover {
-            background: var(--danger);
-        }
-
-        .slide-item-btn.download:hover {
-            background: var(--accent);
-            color: #000;
-        }
-
-        /* ========== MAIN AREA ========== */
-        .main-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-
-        /* ========== TOP BAR ========== */
-        .top-bar {
-            padding: 16px 24px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--accent), #a0cc00);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 18px;
-            color: #000;
-        }
-
-        .template-name-input {
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            font-size: 18px;
-            font-weight: 600;
-            width: 200px;
-            outline: none;
-        }
-
-        .template-name-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .top-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-hover);
-            border-color: var(--text-muted);
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #000;
-        }
-
-        .btn-primary:hover {
-            background: var(--accent-hover);
-        }
-
-        /* ========== TOOLBAR ========== */
-        .toolbar {
-            padding: 12px 24px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .tool-btn {
-            padding: 10px 16px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .tool-btn:hover {
-            background: var(--bg-hover);
-            border-color: var(--text-muted);
-        }
-
-        .tool-btn.active {
-            background: var(--accent);
-            color: #000;
-            border-color: var(--accent);
-        }
-
-        /* ========== CANVAS AREA ========== */
-        .canvas-area {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            overflow: auto;
-            background: var(--bg-primary);
-        }
-
-        .canvas-container {
-            position: relative;
-        }
-
-        .canvas {
-            width: 405px;
-            height: 506px;
-            background: #fff;
-            border-radius: 16px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
-        }
-
-        .canvas-bg {
-            position: absolute;
-            inset: 0;
-            background-size: cover;
-            background-position: center;
-            transition: background-position 0.1s;
-        }
-
-        .canvas-overlay {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        .canvas-element {
-            position: absolute;
-            cursor: move;
-            user-select: none;
-            transition: outline 0.15s;
-        }
-
-        .canvas-element:hover {
-            outline: 2px solid rgba(200, 255, 0, 0.5);
-            outline-offset: 4px;
-        }
-
-        .canvas-element.selected {
-            outline: 2px solid var(--accent);
-            outline-offset: 4px;
-        }
-
-        .canvas-element.dragging {
-            opacity: 0.8;
-        }
-
-        /* ========== NAVIGATION ========== */
-        .canvas-nav {
-            padding: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .nav-btn {
-            width: 44px;
-            height: 44px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .nav-btn:hover:not(:disabled) {
-            background: var(--bg-hover);
-        }
-
-        .nav-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .nav-info {
-            font-size: 15px;
-            color: var(--text-secondary);
-            font-weight: 500;
-            min-width: 60px;
-            text-align: center;
-        }
-
-        /* ========== RIGHT SIDEBAR - PROPERTIES ========== */
-        .sidebar-right {
-            width: 320px;
-            background: var(--bg-secondary);
-            border-left: 1px solid var(--border);
-            overflow-y: auto;
-            flex-shrink: 0;
-        }
-
-        .props-section {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .props-section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .props-section-title {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .props-row {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .props-field {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .props-label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .props-input {
-            width: 100%;
-            padding: 12px 14px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 14px;
-            font-family: inherit;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .props-input:focus {
-            border-color: var(--accent);
-        }
-
-        .props-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .props-textarea {
-            min-height: 100px;
-            resize: vertical;
-            line-height: 1.5;
-        }
-
-        .props-select {
-            width: 100%;
-            padding: 12px 14px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 14px;
-            font-family: inherit;
-            cursor: pointer;
-            outline: none;
-        }
-
-        .props-color-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .props-color {
-            width: 48px;
-            height: 48px;
-            padding: 4px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .props-color-value {
-            flex: 1;
-            padding: 12px 14px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 14px;
-            font-family: monospace;
-        }
-
-        .props-range-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .props-range {
-            flex: 1;
-            height: 6px;
-            -webkit-appearance: none;
-            background: var(--bg-tertiary);
-            border-radius: 3px;
-            outline: none;
-        }
-
-        .props-range::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--accent);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .props-range-value {
-            min-width: 48px;
-            text-align: right;
-            font-size: 14px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .props-btn-group {
-            display: flex;
-            gap: 6px;
-        }
-
-        .props-btn {
-            flex: 1;
-            padding: 12px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .props-btn:hover {
-            background: var(--bg-hover);
-        }
-
-        .props-btn.active {
-            background: var(--accent);
-            color: #000;
-            border-color: var(--accent);
-        }
-
-        .btn-danger {
-            width: 100%;
-            padding: 12px;
-            background: transparent;
-            border: 1px solid var(--danger);
-            border-radius: 10px;
-            color: var(--danger);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .btn-danger:hover {
-            background: var(--danger);
-            color: #fff;
-        }
-
-        /* ========== HINT ========== */
-        .props-hint {
-            padding: 20px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-
-        .props-hint-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-
-        /* ========== MODAL ========== */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 20px;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--bg-secondary);
-            border-radius: 20px;
-            padding: 28px;
-            width: 100%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .modal-close {
-            width: 36px;
-            height: 36px;
-            background: var(--bg-tertiary);
-            border: none;
-            border-radius: 8px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-close:hover {
-            background: var(--bg-hover);
-            color: var(--text-primary);
-        }
-
-        .template-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .template-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .template-item:hover {
-            background: var(--bg-hover);
-            border-color: var(--accent);
-        }
-
-        .template-item-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .template-item-name {
-            font-weight: 600;
-            font-size: 15px;
-        }
-
-        .template-item-meta {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .template-item-delete {
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border: none;
-            border-radius: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .template-item-delete:hover {
-            background: var(--danger);
-            color: #fff;
-        }
-
-        /* ========== TOAST ========== */
-        .toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 16px 24px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            display: none;
-            z-index: 1001;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        }
-
-        .toast.show {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .toast.success {
-            border-color: var(--success);
-        }
-
-        .toast.success::before {
-            content: '✓';
-            color: var(--success);
-            font-weight: 700;
-        }
-
-        .toast.error {
-            border-color: var(--danger);
-        }
-
-        .toast.error::before {
-            content: '✕';
-            color: var(--danger);
-            font-weight: 700;
-        }
-
-        /* ========== PHOTO CONTROLS ========== */
-        .photo-controls {
-            position: absolute;
-            bottom: -50px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            gap: 8px;
-            background: var(--bg-secondary);
-            padding: 8px 12px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-        }
-
-        .photo-controls.show {
-            display: flex;
-        }
-
-        .photo-control-btn {
-            width: 36px;
-            height: 36px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .photo-control-btn:hover {
-            background: var(--bg-hover);
-        }
-
-        /* ========== MOBILE ========== */
-        @media (max-width: 1024px) {
-            .sidebar-right {
-                width: 280px;
-            }
-        }
-
-        @media (max-width: 900px) {
-            .app {
-                flex-direction: column;
-            }
-
-            .sidebar-left {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-            }
-
-            .slides-list {
-                flex-direction: row;
-                overflow-x: auto;
-                overflow-y: hidden;
-                padding: 12px;
-            }
-
-            .slide-item {
-                width: 80px;
-                flex-shrink: 0;
-            }
-
-            .sidebar-right {
-                width: 100%;
-                border-left: none;
-                border-top: 1px solid var(--border);
-            }
-
-            .canvas {
-                width: 324px;
-                height: 405px;
-            }
-
-            .top-bar {
-                padding: 12px 16px;
-            }
-
-            .template-name-input {
-                width: 140px;
-                font-size: 16px;
-            }
-
-            .top-actions {
-                gap: 8px;
-            }
-
-            .btn {
-                padding: 10px 14px;
-                font-size: 13px;
-            }
-
-            .toolbar {
-                padding: 10px 16px;
-            }
-        }
-
-        @media (max-width: 500px) {
-            .top-actions .btn span {
-                display: none;
-            }
-
-            .canvas {
-                width: 270px;
-                height: 338px;
-            }
-        }
-
-        /* ========== EMPTY STATE ========== */
-        .empty-templates {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-muted);
-        }
-
-        .empty-templates-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.3;
-        }
+        :root{--bg-primary:#0a0a0a;--bg-secondary:#111;--bg-tertiary:#1a1a1a;--bg-hover:#222;--border:#2a2a2a;--text-primary:#fff;--text-secondary:#888;--text-muted:#555;--accent:#c8ff00;--danger:#ff4444}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh}
+        .app{display:flex;height:100vh}
+        .sidebar-left{width:200px;background:var(--bg-secondary);border-right:1px solid var(--border);display:flex;flex-direction:column}
+        .sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+        .sidebar-title{font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px}
+        .btn-icon{width:32px;height:32px;background:var(--accent);border:none;border-radius:8px;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600}
+        .slides-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+        .slide-item{position:relative;aspect-ratio:4/5;background:var(--bg-tertiary);border-radius:10px;cursor:pointer;overflow:hidden;border:3px solid transparent;transition:border-color .2s}
+        .slide-item:hover{border-color:var(--border)}
+        .slide-item.active{border-color:var(--accent)}
+        .slide-item.dragging{opacity:.5}
+        .slide-item.drag-over{border-style:dashed;border-color:var(--accent)}
+        .slide-item-preview{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:7px}
+        .slide-item-label{position:absolute;top:4px;left:4px;padding:2px 6px;border-radius:4px;font-size:8px;font-weight:700;text-transform:uppercase}
+        .slide-item-label.intro{background:#ff6b6b;color:#fff}
+        .slide-item-label.content{background:#4ecdc4;color:#fff}
+        .slide-item-label.ending{background:#ffe66d;color:#000}
+        .slide-item-number{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.8);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600}
+        .slide-item-actions{position:absolute;top:4px;right:4px;display:flex;gap:3px;opacity:0;transition:opacity .2s}
+        .slide-item:hover .slide-item-actions{opacity:1}
+        .slide-item-btn{width:22px;height:22px;background:rgba(0,0,0,.8);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center}
+        .slide-item-btn.delete:hover{background:var(--danger)}
+        .slide-item-btn.download:hover{background:var(--accent);color:#000}
+        .main-area{flex:1;display:flex;flex-direction:column;min-width:0}
+        .top-bar{padding:12px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+        .logo-section{display:flex;align-items:center;gap:12px}
+        .logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),#a0cc00);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#000}
+        .template-name-input{background:transparent;border:none;color:var(--text-primary);font-size:16px;font-weight:600;width:180px;outline:none}
+        .top-actions{display:flex;gap:10px;flex-wrap:wrap}
+        .btn{padding:10px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit}
+        .btn-secondary{background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border)}
+        .btn-secondary:hover{background:var(--bg-hover)}
+        .btn-primary{background:var(--accent);color:#000}
+        .btn-primary:hover{background:#d4ff33}
+        .toolbar{padding:10px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+        .tool-btn{padding:8px 14px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit}
+        .tool-btn:hover{background:var(--bg-hover)}
+        .toolbar-separator{width:1px;background:var(--border);margin:0 4px}
+        .canvas-area{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;background:var(--bg-primary)}
+        .canvas{width:405px;height:506px;background:#fff;border-radius:12px;overflow:hidden;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+        .canvas-bg{position:absolute;inset:0;background-size:cover;background-position:center}
+        .canvas-overlay{position:absolute;inset:0;pointer-events:none}
+        .canvas-element{position:absolute;cursor:move;user-select:none}
+        .canvas-element:hover{outline:2px solid rgba(200,255,0,.5);outline-offset:2px}
+        .canvas-element.selected{outline:2px solid var(--accent);outline-offset:2px}
+        .canvas-photo-element{position:absolute;cursor:move;overflow:hidden;background-size:cover;background-position:center;background-color:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:10px}
+        .canvas-photo-element:hover{outline:2px solid rgba(200,255,0,.5);outline-offset:2px}
+        .canvas-photo-element.selected{outline:2px solid var(--accent);outline-offset:2px}
+        .resize-handle{position:absolute;width:10px;height:10px;background:var(--accent);border-radius:2px}
+        .resize-handle.se{bottom:-5px;right:-5px;cursor:se-resize}
+        .resize-handle.sw{bottom:-5px;left:-5px;cursor:sw-resize}
+        .resize-handle.ne{top:-5px;right:-5px;cursor:ne-resize}
+        .resize-handle.nw{top:-5px;left:-5px;cursor:nw-resize}
+        .canvas-nav{padding:12px;display:flex;justify-content:center;align-items:center;gap:12px}
+        .nav-btn{width:40px;height:40px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:16px}
+        .nav-btn:hover:not(:disabled){background:var(--bg-hover)}
+        .nav-btn:disabled{opacity:.3;cursor:not-allowed}
+        .nav-info{font-size:14px;color:var(--text-secondary);font-weight:500}
+        .sidebar-right{width:300px;background:var(--bg-secondary);border-left:1px solid var(--border);overflow-y:auto}
+        .props-section{padding:16px;border-bottom:1px solid var(--border)}
+        .props-section-title{font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+        .props-row{display:flex;gap:10px;margin-bottom:12px}
+        .props-field{flex:1;min-width:0}
+        .props-label{display:block;font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:500}
+        .props-input{width:100%;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none}
+        .props-input:focus{border-color:var(--accent)}
+        .props-textarea{min-height:80px;resize:vertical;line-height:1.4}
+        .props-select{width:100%;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;cursor:pointer}
+        .props-color-row{display:flex;gap:8px;align-items:center}
+        .props-color{width:44px;height:44px;padding:3px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;cursor:pointer}
+        .props-color-value{flex:1;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;font-family:monospace}
+        .props-range-row{display:flex;align-items:center;gap:10px}
+        .props-range{flex:1;height:6px;-webkit-appearance:none;background:var(--bg-tertiary);border-radius:3px}
+        .props-range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer}
+        .props-range-value{min-width:40px;text-align:right;font-size:13px;color:var(--text-secondary)}
+        .props-btn-group{display:flex;gap:4px}
+        .props-btn{flex:1;padding:10px 8px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);cursor:pointer;font-size:12px;font-weight:500;transition:all .2s;font-family:inherit}
+        .props-btn:hover{background:var(--bg-hover)}
+        .props-btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
+        .align-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:12px}
+        .align-btn{padding:8px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);cursor:pointer;font-size:14px}
+        .align-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .btn-danger{width:100%;padding:10px;background:transparent;border:1px solid var(--danger);border-radius:8px;color:var(--danger);cursor:pointer;font-size:13px;font-weight:600;margin-top:8px;font-family:inherit}
+        .btn-danger:hover{background:var(--danger);color:#fff}
+        .props-hint{padding:20px;text-align:center;color:var(--text-muted);font-size:13px}
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+        .modal-overlay.show{display:flex}
+        .modal{background:var(--bg-secondary);border-radius:16px;padding:24px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;border:1px solid var(--border)}
+        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+        .modal-title{font-size:18px;font-weight:700}
+        .modal-close{width:32px;height:32px;background:var(--bg-tertiary);border:none;border-radius:6px;color:var(--text-secondary);cursor:pointer;font-size:18px}
+        .modal-actions{display:flex;gap:10px;margin-bottom:16px}
+        .template-list{display:flex;flex-direction:column;gap:8px}
+        .template-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;cursor:pointer}
+        .template-item:hover{background:var(--bg-hover);border-color:var(--accent)}
+        .template-item-info{display:flex;flex-direction:column;gap:2px}
+        .template-item-name{font-weight:600;font-size:14px}
+        .template-item-meta{font-size:11px;color:var(--text-muted)}
+        .template-item-actions{display:flex;gap:6px}
+        .template-item-btn{width:28px;height:28px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+        .template-item-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .template-item-btn.delete:hover{background:var(--danger);color:#fff}
+        .toast{position:fixed;bottom:20px;right:20px;padding:14px 20px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;font-size:13px;display:none;z-index:1001}
+        .toast.show{display:flex;align-items:center;gap:8px}
+        .toast.success{border-color:#44ff88}
+        .toast.error{border-color:var(--danger)}
+        .hidden-input{display:none}
+        @media(max-width:900px){.app{flex-direction:column}.sidebar-left{width:100%;border-right:none;border-bottom:1px solid var(--border)}.slides-list{flex-direction:row;overflow-x:auto}.slide-item{width:70px;flex-shrink:0}.sidebar-right{width:100%}.canvas{width:324px;height:405px}}
     </style>
 </head>
 <body>
-    <div class="app" id="app">
-        <!-- Left Sidebar - Slides -->
+    <div class="app">
         <aside class="sidebar-left">
             <div class="sidebar-header">
                 <span class="sidebar-title">Слайды</span>
-                <button class="btn-icon" onclick="addSlide()" title="Добавить слайд">+</button>
+                <button class="btn-icon" onclick="addSlide()">+</button>
             </div>
             <div class="slides-list" id="slidesList"></div>
         </aside>
-
-        <!-- Main Area -->
         <main class="main-area">
-            <!-- Top Bar -->
             <header class="top-bar">
                 <div class="logo-section">
                     <div class="logo">C</div>
-                    <input 
-                        type="text" 
-                        class="template-name-input" 
-                        id="templateName" 
-                        value="Новый шаблон" 
-                        placeholder="Название шаблона"
-                    >
+                    <input type="text" class="template-name-input" id="templateName" value="Новый шаблон">
                 </div>
                 <div class="top-actions">
-                    <button class="btn btn-secondary" onclick="showTemplatesModal()">
-                        📁 <span>Шаблоны</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportAllSlides()">
-                        📥 <span>Скачать всё</span>
-                    </button>
-                    <button class="btn btn-primary" onclick="saveTemplate()">
-                        💾 <span>Сохранить</span>
-                    </button>
+                    <button class="btn btn-secondary" onclick="showTemplatesModal()">📁 Шаблоны</button>
+                    <button class="btn btn-secondary" onclick="exportAllSlides()">📥 Скачать всё</button>
+                    <button class="btn btn-primary" onclick="saveTemplate()">💾 Сохранить</button>
                 </div>
             </header>
-
-            <!-- Toolbar -->
             <div class="toolbar">
-                <button class="tool-btn" onclick="addElement('title')">
-                    <b>T</b> Заголовок
-                </button>
-                <button class="tool-btn" onclick="addElement('description')">
-                    T Описание
-                </button>
-                <button class="tool-btn" onclick="duplicateSlide()">
-                    ⧉ Копировать слайд
-                </button>
+                <button class="tool-btn" onclick="addElement('title')"><b>T</b> Заголовок</button>
+                <button class="tool-btn" onclick="addElement('description')">T Описание</button>
+                <button class="tool-btn" onclick="addElement('photo')">🖼 Фото</button>
+                <div class="toolbar-separator"></div>
+                <button class="tool-btn" onclick="duplicateSlide()">⧉ Копировать</button>
             </div>
-
-            <!-- Canvas Area -->
             <div class="canvas-area">
-                <div class="canvas-container">
-                    <div class="canvas" id="canvas" onclick="deselectElement(event)"></div>
-                    <div class="photo-controls" id="photoControls">
-                        <button class="photo-control-btn" onclick="adjustPhotoZoom(-0.1)" title="Уменьшить">−</button>
-                        <button class="photo-control-btn" onclick="adjustPhotoZoom(0.1)" title="Увеличить">+</button>
-                        <button class="photo-control-btn" onclick="resetPhotoPosition()" title="Сбросить">↺</button>
-                    </div>
-                </div>
+                <div class="canvas" id="canvas" onclick="deselectElement(event)"></div>
             </div>
-
-            <!-- Navigation -->
             <nav class="canvas-nav">
                 <button class="nav-btn" onclick="prevSlide()" id="btnPrev">←</button>
-                <span class="nav-info" id="navInfo">1 / 1</span>
+                <span class="nav-info" id="navInfo">1/1</span>
                 <button class="nav-btn" onclick="nextSlide()" id="btnNext">→</button>
             </nav>
         </main>
-
-        <!-- Right Sidebar - Properties -->
-        <aside class="sidebar-right" id="propsPanel">
-            <!-- Dynamic content -->
-        </aside>
+        <aside class="sidebar-right" id="propsPanel"></aside>
     </div>
-
-    <!-- Templates Modal -->
     <div class="modal-overlay" id="templatesModal">
         <div class="modal">
             <div class="modal-header">
-                <h2 class="modal-title">Мои шаблоны</h2>
+                <h2 class="modal-title">Шаблоны</h2>
                 <button class="modal-close" onclick="hideTemplatesModal()">×</button>
             </div>
+            <div class="modal-actions">
+                <label class="btn btn-secondary" style="cursor:pointer">📤 Импорт<input type="file" accept=".json" onchange="importTemplate(event)" class="hidden-input"></label>
+            </div>
             <div class="template-list" id="templateList"></div>
-            <button class="btn btn-primary" style="width:100%" onclick="hideTemplatesModal()">Закрыть</button>
         </div>
     </div>
-
-    <!-- Toast -->
+    <input type="file" id="photoUpload" accept="image/*" onchange="handlePhotoUpload(event)" class="hidden-input">
+    <input type="file" id="elementPhotoUpload" accept="image/*" onchange="handleElementPhotoUpload(event)" class="hidden-input">
     <div class="toast" id="toast"></div>
-
     <script>
-        // ==================== CONSTANTS ====================
-        const CANVAS_W = 1080;
-        const CANVAS_H = 1350;
-        const PREVIEW_W = 405;
-        const PREVIEW_H = 506;
-        const SCALE = PREVIEW_W / CANVAS_W;
-
-        const FONTS = [
-            'Inter', 'Montserrat', 'Roboto', 'Open Sans', 'Oswald',
-            'Playfair Display', 'PT Sans', 'Nunito', 'Raleway', 'Ubuntu'
-        ];
-
-        const FONT_WEIGHTS = [
-            { value: '300', label: 'Light' },
-            { value: '400', label: 'Regular' },
-            { value: '500', label: 'Medium' },
-            { value: '600', label: 'SemiBold' },
-            { value: '700', label: 'Bold' },
-            { value: '800', label: 'ExtraBold' },
-            { value: '900', label: 'Black' },
-        ];
-
-        const API_URL = window.location.origin;
-
-        // ==================== STATE ====================
-        let state = {
-            templateName: 'Новый шаблон',
-            settings: {
-                username: '@username',
-                totalSlides: 10,
-            },
-            slides: [],
-            currentSlideIndex: 0,
-            selectedElementId: null,
-        };
-
-        let isDragging = false;
-        let dragOffset = { x: 0, y: 0 };
-        let isPhotoDragging = false;
-        let photoStartPos = { x: 0, y: 0 };
-
-        // ==================== INITIALIZATION ====================
-        function init() {
-            state.slides.push(createDefaultSlide(1));
+        const CANVAS_W=1080,CANVAS_H=1350,SCALE=405/1080,EDGE_PADDING=48;
+        const FONTS=['Inter','Montserrat','Roboto','Open Sans','Oswald','Playfair Display'];
+        const FONT_WEIGHTS=[{value:'300',label:'Light'},{value:'400',label:'Regular'},{value:'500',label:'Medium'},{value:'600',label:'SemiBold'},{value:'700',label:'Bold'},{value:'800',label:'ExtraBold'},{value:'900',label:'Black'}];
+        const SLIDE_TYPES=[{value:'intro',label:'Intro'},{value:'content',label:'Content'},{value:'ending',label:'Ending'}];
+        const API_URL=window.location.origin;
+        
+        let state={templateName:'Новый шаблон',settings:{username:'@username',totalSlides:10,endingCount:1},slides:[],currentSlideIndex:0,selectedElementId:null};
+        let isDragging=false,dragOffset={x:0,y:0},isResizing=false,resizeHandle=null,resizeStart={},draggedSlideIndex=null;
+        
+        function init(){
+            state.slides.push(createSlide('intro'));
+            state.slides.push(createSlide('content'));
+            state.slides.push(createSlide('ending'));
             render();
             loadTemplatesList();
         }
-
-        // ==================== SLIDE FUNCTIONS ====================
-        function createDefaultSlide(num) {
-            return {
-                id: 'slide_' + Date.now() + '_' + num,
-                background: {
-                    type: 'color',
-                    color: '#f5f5f5',
-                    photo: '',
-                    photoPosition: { x: 50, y: 50 },
-                    photoZoom: 1,
-                    overlay: 40,
-                    overlayType: 'gradient',
-                },
-                elements: [
-                    {
-                        id: 'username_' + num,
-                        type: 'username',
-                        varName: 'USERNAME',
-                        content: '@username',
-                        x: 48,
-                        y: 48,
-                        fontFamily: 'Inter',
-                        fontSize: 28,
-                        fontWeight: '400',
-                        color: '#333333',
-                        opacity: 80,
-                    },
-                    {
-                        id: 'slidenum_' + num,
-                        type: 'slidenum',
-                        content: '1/10',
-                        x: 1032,
-                        y: 48,
-                        fontFamily: 'Inter',
-                        fontSize: 28,
-                        fontWeight: '400',
-                        color: '#333333',
-                        opacity: 80,
-                        align: 'right',
-                    },
-                    {
-                        id: 'title_' + num,
-                        type: 'title',
-                        varName: 'TITLE',
-                        content: 'Заголовок слайда',
-                        x: 48,
-                        y: 200,
-                        fontFamily: 'Inter',
-                        fontSize: 64,
-                        fontWeight: '700',
-                        color: '#000000',
-                        highlightColor: '#c8ff00',
-                        opacity: 100,
-                        maxWidth: 984,
-                        lineHeight: 1.1,
-                    },
-                    {
-                        id: 'desc_' + num,
-                        type: 'description',
-                        varName: 'DESCRIPTION',
-                        content: 'Описание или дополнительный текст',
-                        x: 48,
-                        y: 450,
-                        fontFamily: 'Inter',
-                        fontSize: 36,
-                        fontWeight: '400',
-                        color: '#444444',
-                        highlightColor: '#c8ff00',
-                        opacity: 100,
-                        maxWidth: 984,
-                        lineHeight: 1.3,
-                    },
-                ],
+        
+        function createSlide(type='content'){
+            const isIntro=type==='intro',isEnding=type==='ending';
+            return{
+                id:'slide_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
+                type:type,
+                background:{type:'color',color:'#f5f5f5',photo:'',photoPosition:{x:50,y:50},photoZoom:1,overlay:40,overlayType:'gradient'},
+                elements:[
+                    {id:'username_'+Date.now(),type:'username',varName:'USERNAME',content:'@username',x:EDGE_PADDING,y:EDGE_PADDING,fontFamily:'Inter',fontSize:28,fontWeight:'400',color:isIntro?'#ffffff':'#333333',opacity:80},
+                    {id:'slidenum_'+Date.now(),type:'slidenum',content:'1/10',x:CANVAS_W-EDGE_PADDING,y:EDGE_PADDING,fontFamily:'Inter',fontSize:28,fontWeight:'400',color:isIntro?'#ffffff':'#333333',opacity:80,align:'right'},
+                    {id:'title_'+Date.now(),type:'title',varName:'TITLE',content:isIntro?'Заголовок карусели':isEnding?'Призыв к действию':'Заголовок слайда',x:EDGE_PADDING,y:isIntro?800:200,fontFamily:'Inter',fontSize:64,fontWeight:'700',color:isIntro?'#ffffff':'#000000',highlightColor:'#c8ff00',opacity:100,maxWidth:CANVAS_W-EDGE_PADDING*2,lineHeight:1.1},
+                    {id:'desc_'+Date.now(),type:'description',varName:'DESCRIPTION',content:isEnding?'Напиши в комментарии!':'Описание',x:EDGE_PADDING,y:isIntro?950:400,fontFamily:'Inter',fontSize:36,fontWeight:'400',color:isIntro?'#ffffff':'#444444',highlightColor:'#c8ff00',opacity:100,maxWidth:CANVAS_W-EDGE_PADDING*2,lineHeight:1.3}
+                ]
             };
         }
-
-        function addSlide() {
-            const num = state.slides.length + 1;
-            const newSlide = createDefaultSlide(num);
-            
-            // Copy settings from current slide
-            const current = state.slides[state.currentSlideIndex];
-            if (current) {
-                newSlide.elements.forEach(el => {
-                    const sourceEl = current.elements.find(e => e.type === el.type);
-                    if (sourceEl) {
-                        el.fontFamily = sourceEl.fontFamily;
-                        el.fontSize = sourceEl.fontSize;
-                        el.fontWeight = sourceEl.fontWeight;
-                        el.color = sourceEl.color;
-                        el.opacity = sourceEl.opacity;
-                        el.x = sourceEl.x;
-                        el.y = sourceEl.y;
-                        if (sourceEl.highlightColor) el.highlightColor = sourceEl.highlightColor;
-                    }
-                });
-            }
-            
-            state.slides.push(newSlide);
-            state.currentSlideIndex = state.slides.length - 1;
-            state.selectedElementId = null;
+        
+        function addSlide(){
+            let insertIndex=state.slides.length;
+            for(let i=state.slides.length-1;i>=0;i--){if(state.slides[i].type==='ending')insertIndex=i;else break;}
+            state.slides.splice(insertIndex,0,createSlide('content'));
+            state.currentSlideIndex=insertIndex;
+            state.selectedElementId=null;
             updateSlideNumbers();
             render();
         }
-
-        function deleteSlide(index, event) {
-            if (event) event.stopPropagation();
-            if (state.slides.length <= 1) {
-                showToast('Нельзя удалить единственный слайд', 'error');
-                return;
-            }
-            
-            state.slides.splice(index, 1);
-            if (state.currentSlideIndex >= state.slides.length) {
-                state.currentSlideIndex = state.slides.length - 1;
-            }
-            state.selectedElementId = null;
+        
+        function deleteSlide(index,event){
+            if(event)event.stopPropagation();
+            if(state.slides.length<=1){showToast('Нельзя удалить','error');return;}
+            state.slides.splice(index,1);
+            if(state.currentSlideIndex>=state.slides.length)state.currentSlideIndex=state.slides.length-1;
+            state.selectedElementId=null;
             updateSlideNumbers();
             render();
         }
-
-        function duplicateSlide() {
-            const current = state.slides[state.currentSlideIndex];
-            const copy = JSON.parse(JSON.stringify(current));
-            copy.id = 'slide_' + Date.now();
-            copy.elements.forEach(el => {
-                el.id = el.type + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            });
-            
-            state.slides.splice(state.currentSlideIndex + 1, 0, copy);
+        
+        function duplicateSlide(){
+            const copy=JSON.parse(JSON.stringify(state.slides[state.currentSlideIndex]));
+            copy.id='slide_'+Date.now();
+            copy.elements.forEach(el=>el.id=el.type+'_'+Date.now()+'_'+Math.random().toString(36).substr(2,5));
+            state.slides.splice(state.currentSlideIndex+1,0,copy);
             state.currentSlideIndex++;
             updateSlideNumbers();
             render();
-            showToast('Слайд скопирован', 'success');
+            showToast('Скопировано','success');
         }
-
-        function selectSlide(index) {
-            state.currentSlideIndex = index;
-            state.selectedElementId = null;
+        
+        function selectSlide(index){state.currentSlideIndex=index;state.selectedElementId=null;render();}
+        function prevSlide(){if(state.currentSlideIndex>0){state.currentSlideIndex--;state.selectedElementId=null;render();}}
+        function nextSlide(){if(state.currentSlideIndex<state.slides.length-1){state.currentSlideIndex++;state.selectedElementId=null;render();}}
+        function updateSlideNumbers(){state.slides.forEach((s,i)=>{const n=s.elements.find(e=>e.type==='slidenum');if(n)n.content=`${i+1}/${state.settings.totalSlides}`;});}
+        function updateSlideType(type){state.slides[state.currentSlideIndex].type=type;render();}
+        
+        function handleSlideDragStart(index,event){draggedSlideIndex=index;event.target.closest('.slide-item').classList.add('dragging');}
+        function handleSlideDragOver(index,event){event.preventDefault();if(draggedSlideIndex===null||draggedSlideIndex===index)return;document.querySelectorAll('.slide-item').forEach(el=>el.classList.remove('drag-over'));event.target.closest('.slide-item').classList.add('drag-over');}
+        function handleSlideDrop(index,event){
+            event.preventDefault();
+            if(draggedSlideIndex===null||draggedSlideIndex===index)return;
+            const slide=state.slides.splice(draggedSlideIndex,1)[0];
+            state.slides.splice(index,0,slide);
+            if(state.currentSlideIndex===draggedSlideIndex)state.currentSlideIndex=index;
+            draggedSlideIndex=null;
+            updateSlideNumbers();
             render();
         }
-
-        function prevSlide() {
-            if (state.currentSlideIndex > 0) {
-                state.currentSlideIndex--;
-                state.selectedElementId = null;
-                render();
+        function handleSlideDragEnd(){draggedSlideIndex=null;document.querySelectorAll('.slide-item').forEach(el=>el.classList.remove('dragging','drag-over'));}
+        
+        function addElement(type){
+            const slide=state.slides[state.currentSlideIndex];
+            const id=type+'_'+Date.now();
+            if(type==='photo'){
+                slide.elements.push({id,type:'photo',varName:'PHOTO_'+(slide.elements.filter(e=>e.type==='photo').length+1),photo:'',x:CANVAS_W/2-150,y:CANVAS_H/2-150,width:300,height:300,borderRadius:0});
+            }else{
+                slide.elements.push({id,type,varName:type.toUpperCase()+'_'+(slide.elements.filter(e=>e.type===type).length+1),content:type==='title'?'Новый заголовок':'Описание',x:EDGE_PADDING,y:type==='title'?600:750,fontFamily:'Inter',fontSize:type==='title'?64:36,fontWeight:type==='title'?'700':'400',color:'#000000',highlightColor:'#c8ff00',opacity:100,maxWidth:CANVAS_W-EDGE_PADDING*2,lineHeight:type==='title'?1.1:1.3});
             }
+            state.selectedElementId=id;
+            render();
         }
-
-        function nextSlide() {
-            if (state.currentSlideIndex < state.slides.length - 1) {
-                state.currentSlideIndex++;
-                state.selectedElementId = null;
-                render();
+        
+        function selectElement(id,event){if(event)event.stopPropagation();state.selectedElementId=id;render();}
+        function deselectElement(event){if(event.target.id==='canvas'||event.target.classList.contains('canvas-bg')||event.target.classList.contains('canvas-overlay')){state.selectedElementId=null;render();}}
+        function deleteElement(){
+            if(!state.selectedElementId)return;
+            const slide=state.slides[state.currentSlideIndex];
+            const el=slide.elements.find(e=>e.id===state.selectedElementId);
+            if(el&&(el.type==='username'||el.type==='slidenum')){showToast('Нельзя удалить','error');return;}
+            slide.elements=slide.elements.filter(e=>e.id!==state.selectedElementId);
+            state.selectedElementId=null;
+            render();
+        }
+        function updateElement(field,value){
+            if(!state.selectedElementId)return;
+            const el=state.slides[state.currentSlideIndex].elements.find(e=>e.id===state.selectedElementId);
+            if(el){el[field]=value;render();}
+        }
+        
+        function alignElement(h,v){
+            if(!state.selectedElementId)return;
+            const el=state.slides[state.currentSlideIndex].elements.find(e=>e.id===state.selectedElementId);
+            if(!el)return;
+            const elW=el.width||el.maxWidth||200,elH=el.height||(el.fontSize*(el.lineHeight||1.2));
+            if(h==='left'){el.x=EDGE_PADDING;if(el.align)el.align='left';}
+            else if(h==='center'){el.x=CANVAS_W/2;if(el.type!=='photo')el.align='center';else el.x=(CANVAS_W-elW)/2;}
+            else if(h==='right'){el.x=CANVAS_W-EDGE_PADDING;if(el.type!=='photo')el.align='right';else el.x=CANVAS_W-EDGE_PADDING-elW;}
+            if(v==='top')el.y=EDGE_PADDING;
+            else if(v==='middle')el.y=(CANVAS_H-elH)/2;
+            else if(v==='bottom')el.y=CANVAS_H-EDGE_PADDING-elH;
+            render();
+        }
+        
+        function updateBackground(field,value){state.slides[state.currentSlideIndex].background[field]=value;render();}
+        function triggerPhotoUpload(){document.getElementById('photoUpload').click();}
+        function handlePhotoUpload(event){
+            const file=event.target.files[0];if(!file)return;
+            const reader=new FileReader();
+            reader.onload=e=>{updateBackground('photo',e.target.result);updateBackground('type','photo');};
+            reader.readAsDataURL(file);
+            event.target.value='';
+        }
+        function triggerElementPhotoUpload(){document.getElementById('elementPhotoUpload').click();}
+        function handleElementPhotoUpload(event){
+            const file=event.target.files[0];if(!file||!state.selectedElementId)return;
+            const reader=new FileReader();
+            reader.onload=e=>updateElement('photo',e.target.result);
+            reader.readAsDataURL(file);
+            event.target.value='';
+        }
+        
+        function startDrag(elementId,event){
+            event.stopPropagation();
+            if(event.target.classList.contains('resize-handle'))return;
+            isDragging=true;
+            state.selectedElementId=elementId;
+            const el=state.slides[state.currentSlideIndex].elements.find(e=>e.id===elementId);
+            const canvas=document.getElementById('canvas');
+            const rect=canvas.getBoundingClientRect();
+            dragOffset={x:event.clientX-rect.left-el.x*SCALE,y:event.clientY-rect.top-el.y*SCALE};
+            render();
+        }
+        
+        function startResize(elementId,handle,event){
+            event.stopPropagation();
+            isResizing=true;
+            resizeHandle=handle;
+            state.selectedElementId=elementId;
+            const el=state.slides[state.currentSlideIndex].elements.find(e=>e.id===elementId);
+            resizeStart={x:event.clientX,y:event.clientY,width:el.width,height:el.height,elX:el.x,elY:el.y};
+            render();
+        }
+        
+        document.addEventListener('mousemove',e=>{
+            if(isDragging&&state.selectedElementId){
+                const canvas=document.getElementById('canvas');
+                const rect=canvas.getBoundingClientRect();
+                const el=state.slides[state.currentSlideIndex].elements.find(x=>x.id===state.selectedElementId);
+                if(el){
+                    el.x=Math.round((e.clientX-rect.left-dragOffset.x)/SCALE);
+                    el.y=Math.round((e.clientY-rect.top-dragOffset.y)/SCALE);
+                    el.x=Math.max(0,Math.min(el.x,CANVAS_W-50));
+                    el.y=Math.max(0,Math.min(el.y,CANVAS_H-50));
+                    render();
+                }
             }
+            if(isResizing&&state.selectedElementId){
+                const el=state.slides[state.currentSlideIndex].elements.find(x=>x.id===state.selectedElementId);
+                if(el){
+                    const dx=(e.clientX-resizeStart.x)/SCALE,dy=(e.clientY-resizeStart.y)/SCALE;
+                    if(resizeHandle==='se'){el.width=Math.max(50,resizeStart.width+dx);el.height=Math.max(50,resizeStart.height+dy);}
+                    else if(resizeHandle==='sw'){el.width=Math.max(50,resizeStart.width-dx);el.height=Math.max(50,resizeStart.height+dy);el.x=resizeStart.elX+dx;}
+                    else if(resizeHandle==='ne'){el.width=Math.max(50,resizeStart.width+dx);el.height=Math.max(50,resizeStart.height-dy);el.y=resizeStart.elY+dy;}
+                    else if(resizeHandle==='nw'){el.width=Math.max(50,resizeStart.width-dx);el.height=Math.max(50,resizeStart.height-dy);el.x=resizeStart.elX+dx;el.y=resizeStart.elY+dy;}
+                    render();
+                }
+            }
+        });
+        document.addEventListener('mouseup',()=>{isDragging=false;isResizing=false;resizeHandle=null;});
+        
+        function render(){renderSlidesList();renderCanvas();renderPropsPanel();renderNav();}
+        
+        function renderSlidesList(){
+            const c=document.getElementById('slidesList');
+            c.innerHTML=state.slides.map((s,i)=>{
+                const label=s.type==='intro'?'intro':s.type==='ending'?'ending':'';
+                return`<div class="slide-item ${i===state.currentSlideIndex?'active':''}" onclick="selectSlide(${i})" draggable="true" ondragstart="handleSlideDragStart(${i},event)" ondragover="handleSlideDragOver(${i},event)" ondrop="handleSlideDrop(${i},event)" ondragend="handleSlideDragEnd()">
+                    <div class="slide-item-preview">${renderSlidePreview(s,i)}</div>
+                    ${label?`<span class="slide-item-label ${label}">${label}</span>`:''}
+                    <span class="slide-item-number">${i+1}</span>
+                    <div class="slide-item-actions">
+                        <button class="slide-item-btn download" onclick="downloadSlide(${i},event)">↓</button>
+                        <button class="slide-item-btn delete" onclick="deleteSlide(${i},event)">×</button>
+                    </div>
+                </div>`;
+            }).join('');
         }
-
-        function updateSlideNumbers() {
-            state.slides.forEach((slide, i) => {
-                const numEl = slide.elements.find(el => el.type === 'slidenum');
-                if (numEl) {
-                    numEl.content = `${i + 1}/${state.settings.totalSlides}`;
+        
+        function renderSlidePreview(slide,index){
+            const bg=slide.background,ms=0.12;
+            let html='';
+            if(bg.type==='photo'&&bg.photo){
+                html+=`<div style="position:absolute;inset:0;background:url(${bg.photo}) center/cover"></div>`;
+                if(bg.overlay>0){
+                    if(bg.overlayType==='gradient')html+=`<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,${bg.overlay/100}) 0%,transparent 60%)"></div>`;
+                    else html+=`<div style="position:absolute;inset:0;background:rgba(0,0,0,${bg.overlay/100})"></div>`;
+                }
+            }else html+=`<div style="position:absolute;inset:0;background:${bg.color}"></div>`;
+            slide.elements.forEach(el=>{
+                if(el.type==='photo'){
+                    html+=`<div style="position:absolute;left:${el.x*ms}px;top:${el.y*ms}px;width:${el.width*ms}px;height:${el.height*ms}px;border-radius:${el.borderRadius||0}%;background:${el.photo?`url(${el.photo}) center/cover`:'#333'}"></div>`;
+                }else{
+                    let content=el.content||'';
+                    if(el.type==='username')content=state.settings.username;
+                    if(el.type==='slidenum')content=`${index+1}/${state.settings.totalSlides}`;
+                    content=content.replace(/\*([^*]+)\*/g,'$1').substring(0,30);
+                    const fs=Math.max(4,el.fontSize*ms);
+                    html+=`<div style="position:absolute;left:${el.x*ms}px;top:${el.y*ms}px;font-size:${fs}px;font-weight:${el.fontWeight};color:${el.color};opacity:${(el.opacity||100)/100};white-space:nowrap;overflow:hidden;${el.align==='right'?'transform:translateX(-100%);':''}${el.align==='center'?'transform:translateX(-50%);':''}">${content}</div>`;
                 }
             });
+            return html;
         }
-
-        // ==================== ELEMENT FUNCTIONS ====================
-        function addElement(type) {
-            const slide = state.slides[state.currentSlideIndex];
-            const id = type + '_' + Date.now();
+        
+        function renderCanvas(){
+            const canvas=document.getElementById('canvas'),slide=state.slides[state.currentSlideIndex],bg=slide.background;
+            let html='';
+            if(bg.type==='photo'&&bg.photo){
+                const pos=bg.photoPosition||{x:50,y:50},zoom=bg.photoZoom||1;
+                html+=`<div class="canvas-bg" style="background-image:url(${bg.photo});background-position:${pos.x}% ${pos.y}%;background-size:cover;transform:scale(${zoom});transform-origin:${pos.x}% ${pos.y}%"></div>`;
+                if(bg.overlay>0){
+                    if(bg.overlayType==='gradient')html+=`<div class="canvas-overlay" style="background:linear-gradient(to top,rgba(0,0,0,${bg.overlay/100}) 0%,transparent 60%)"></div>`;
+                    else html+=`<div class="canvas-overlay" style="background:rgba(0,0,0,${bg.overlay/100})"></div>`;
+                }
+            }else html+=`<div class="canvas-bg" style="background:${bg.color}"></div>`;
             
-            const element = {
-                id,
-                type,
-                varName: type.toUpperCase() + '_' + (slide.elements.filter(e => e.type === type).length + 1),
-                content: type === 'title' ? 'Новый заголовок' : 'Новое описание',
-                x: 48,
-                y: type === 'title' ? 600 : 750,
-                fontFamily: 'Inter',
-                fontSize: type === 'title' ? 64 : 36,
-                fontWeight: type === 'title' ? '700' : '400',
-                color: type === 'title' ? '#000000' : '#444444',
-                highlightColor: '#c8ff00',
-                opacity: 100,
-                maxWidth: 984,
-                lineHeight: type === 'title' ? 1.1 : 1.3,
-            };
+            slide.elements.forEach(el=>{
+                const isSelected=el.id===state.selectedElementId;
+                if(el.type==='photo'){
+                    html+=`<div class="canvas-photo-element ${isSelected?'selected':''}" style="left:${el.x*SCALE}px;top:${el.y*SCALE}px;width:${el.width*SCALE}px;height:${el.height*SCALE}px;border-radius:${el.borderRadius||0}%;${el.photo?`background-image:url(${el.photo});`:''}" onclick="selectElement('${el.id}',event)" onmousedown="startDrag('${el.id}',event)">${!el.photo?'🖼':''}${isSelected?`<div class="resize-handle se" onmousedown="startResize('${el.id}','se',event)"></div><div class="resize-handle sw" onmousedown="startResize('${el.id}','sw',event)"></div><div class="resize-handle ne" onmousedown="startResize('${el.id}','ne',event)"></div><div class="resize-handle nw" onmousedown="startResize('${el.id}','nw',event)"></div>`:''}</div>`;
+                }else{
+                    let content=el.content||'';
+                    if(el.type==='username')content=state.settings.username;
+                    const hc=el.highlightColor||'#c8ff00';
+                    content=content.replace(/\*([^*]+)\*/g,`<span style="color:${hc}">$1</span>`).replace(/\n/g,'<br>');
+                    html+=`<div class="canvas-element ${isSelected?'selected':''}" style="left:${el.x*SCALE}px;top:${el.y*SCALE}px;font-family:'${el.fontFamily}',sans-serif;font-size:${el.fontSize*SCALE}px;font-weight:${el.fontWeight};color:${el.color};opacity:${(el.opacity||100)/100};line-height:${el.lineHeight||1.2};${el.maxWidth?`max-width:${el.maxWidth*SCALE}px;`:''}${el.align==='right'?'transform:translateX(-100%);':''}${el.align==='center'?'transform:translateX(-50%);':''}" onclick="selectElement('${el.id}',event)" onmousedown="startDrag('${el.id}',event)">${content}</div>`;
+                }
+            });
+            canvas.innerHTML=html;
+        }
+        
+        function renderPropsPanel(){
+            const panel=document.getElementById('propsPanel'),slide=state.slides[state.currentSlideIndex],bg=slide.background,sel=slide.elements.find(e=>e.id===state.selectedElementId);
+            let html=`<div class="props-section"><div class="props-section-title">Тип слайда</div><select class="props-select" onchange="updateSlideType(this.value)">${SLIDE_TYPES.map(t=>`<option value="${t.value}" ${slide.type===t.value?'selected':''}>${t.label}</option>`).join('')}</select></div>`;
+            html+=`<div class="props-section"><div class="props-section-title">Фон</div><div class="props-btn-group" style="margin-bottom:12px"><button class="props-btn ${bg.type==='color'?'active':''}" onclick="updateBackground('type','color')">Цвет</button><button class="props-btn ${bg.type==='photo'?'active':''}" onclick="triggerPhotoUpload()">Фото</button></div>`;
+            if(bg.type==='color')html+=`<div class="props-field"><label class="props-label">Цвет</label><div class="props-color-row"><input type="color" class="props-color" value="${bg.color}" onchange="updateBackground('color',this.value)"><input type="text" class="props-color-value" value="${bg.color}" onchange="updateBackground('color',this.value)"></div></div>`;
+            else html+=`<div class="props-field"><label class="props-label">Затемнение</label><div class="props-range-row"><input type="range" class="props-range" min="0" max="100" value="${bg.overlay||0}" oninput="this.nextElementSibling.textContent=this.value+'%'" onchange="updateBackground('overlay',parseInt(this.value))"><span class="props-range-value">${bg.overlay||0}%</span></div></div><div class="props-field"><label class="props-label">Тип</label><div class="props-btn-group"><button class="props-btn ${bg.overlayType==='full'?'active':''}" onclick="updateBackground('overlayType','full')">Полное</button><button class="props-btn ${bg.overlayType==='gradient'?'active':''}" onclick="updateBackground('overlayType','gradient')">Градиент</button></div></div>`;
+            html+=`</div>`;
+            html+=`<div class="props-section"><div class="props-section-title">Настройки</div><div class="props-field"><label class="props-label">Никнейм</label><input type="text" class="props-input" value="${state.settings.username}" onchange="state.settings.username=this.value;render()"></div><div class="props-row"><div class="props-field"><label class="props-label">Слайдов</label><input type="number" class="props-input" value="${state.settings.totalSlides}" min="1" max="20" onchange="state.settings.totalSlides=parseInt(this.value);updateSlideNumbers();render()"></div><div class="props-field"><label class="props-label">Ending</label><select class="props-select" onchange="state.settings.endingCount=parseInt(this.value)"><option value="1" ${state.settings.endingCount===1?'selected':''}>1</option><option value="2" ${state.settings.endingCount===2?'selected':''}>2</option></select></div></div></div>`;
             
-            slide.elements.push(element);
-            state.selectedElementId = id;
-            render();
+            if(sel){
+                const isSys=sel.type==='username'||sel.type==='slidenum',isPhoto=sel.type==='photo';
+                const labels={username:'Никнейм',slidenum:'Нумерация',title:'Заголовок',description:'Описание',photo:'Фото'};
+                html+=`<div class="props-section"><div class="props-section-title">${labels[sel.type]||'Элемент'}</div>`;
+                html+=`<div class="props-field"><label class="props-label">Выравнивание</label><div class="align-grid"><button class="align-btn" onclick="alignElement('left','top')">↖</button><button class="align-btn" onclick="alignElement('center','top')">↑</button><button class="align-btn" onclick="alignElement('right','top')">↗</button><button class="align-btn" onclick="alignElement('left','middle')">←</button><button class="align-btn" onclick="alignElement('center','middle')">•</button><button class="align-btn" onclick="alignElement('right','middle')">→</button><button class="align-btn" onclick="alignElement('left','bottom')">↙</button><button class="align-btn" onclick="alignElement('center','bottom')">↓</button><button class="align-btn" onclick="alignElement('right','bottom')">↘</button></div></div>`;
+                if(!isSys)html+=`<div class="props-field"><label class="props-label">Переменная N8N</label><input type="text" class="props-input" value="${sel.varName||''}" onchange="updateElement('varName',this.value)"></div>`;
+                if(isPhoto){
+                    html+=`<div class="props-field"><button class="btn btn-secondary" style="width:100%" onclick="triggerElementPhotoUpload()">📷 Загрузить</button></div>`;
+                    html+=`<div class="props-row"><div class="props-field"><label class="props-label">Ширина</label><input type="number" class="props-input" value="${sel.width}" onchange="updateElement('width',parseInt(this.value))"></div><div class="props-field"><label class="props-label">Высота</label><input type="number" class="props-input" value="${sel.height}" onchange="updateElement('height',parseInt(this.value))"></div></div>`;
+                    html+=`<div class="props-field"><label class="props-label">Закругление 0-50%</label><div class="props-range-row"><input type="range" class="props-range" min="0" max="50" value="${sel.borderRadius||0}" oninput="this.nextElementSibling.textContent=this.value+'%'" onchange="updateElement('borderRadius',parseInt(this.value))"><span class="props-range-value">${sel.borderRadius||0}%</span></div></div>`;
+                }else{
+                    if(!isSys)html+=`<div class="props-field"><label class="props-label">Текст (*выделение*)</label><textarea class="props-input props-textarea" onchange="updateElement('content',this.value)">${sel.content}</textarea></div>`;
+                    html+=`<div class="props-row"><div class="props-field"><label class="props-label">Шрифт</label><select class="props-select" onchange="updateElement('fontFamily',this.value)">${FONTS.map(f=>`<option value="${f}" ${sel.fontFamily===f?'selected':''}>${f}</option>`).join('')}</select></div><div class="props-field"><label class="props-label">Размер</label><input type="number" class="props-input" value="${sel.fontSize}" onchange="updateElement('fontSize',parseInt(this.value))"></div></div>`;
+                    html+=`<div class="props-row"><div class="props-field"><label class="props-label">Жирность</label><select class="props-select" onchange="updateElement('fontWeight',this.value)">${FONT_WEIGHTS.map(w=>`<option value="${w.value}" ${sel.fontWeight===w.value?'selected':''}>${w.label}</option>`).join('')}</select></div><div class="props-field"><label class="props-label">Прозрачность</label><input type="number" class="props-input" value="${sel.opacity}" min="0" max="100" onchange="updateElement('opacity',parseInt(this.value))"></div></div>`;
+                    html+=`<div class="props-field"><label class="props-label">Цвет</label><div class="props-color-row"><input type="color" class="props-color" value="${sel.color}" onchange="updateElement('color',this.value)"><input type="text" class="props-color-value" value="${sel.color}" onchange="updateElement('color',this.value)"></div></div>`;
+                    if(!isSys)html+=`<div class="props-field"><label class="props-label">Цвет выделения</label><div class="props-color-row"><input type="color" class="props-color" value="${sel.highlightColor||'#c8ff00'}" onchange="updateElement('highlightColor',this.value)"><input type="text" class="props-color-value" value="${sel.highlightColor||'#c8ff00'}" onchange="updateElement('highlightColor',this.value)"></div></div>`;
+                    if(!isSys)html+=`<div class="props-field"><label class="props-label">Межстрочный</label><div class="props-range-row"><input type="range" class="props-range" min="0.8" max="2" step="0.05" value="${sel.lineHeight||1.2}" oninput="this.nextElementSibling.textContent=this.value" onchange="updateElement('lineHeight',parseFloat(this.value))"><span class="props-range-value">${sel.lineHeight||1.2}</span></div></div>`;
+                }
+                html+=`<div class="props-row"><div class="props-field"><label class="props-label">X</label><input type="number" class="props-input" value="${Math.round(sel.x)}" onchange="updateElement('x',parseInt(this.value))"></div><div class="props-field"><label class="props-label">Y</label><input type="number" class="props-input" value="${Math.round(sel.y)}" onchange="updateElement('y',parseInt(this.value))"></div></div>`;
+                if(!isSys)html+=`<button class="btn-danger" onclick="deleteElement()">Удалить</button>`;
+                html+=`</div>`;
+            }else html+=`<div class="props-hint">👆 Выберите элемент</div>`;
+            panel.innerHTML=html;
         }
-
-        function selectElement(id, event) {
-            if (event) event.stopPropagation();
-            state.selectedElementId = id;
-            render();
-        }
-
-        function deselectElement(event) {
-            if (event.target.id === 'canvas' || event.target.classList.contains('canvas-bg')) {
-                state.selectedElementId = null;
-                render();
+        
+        function renderNav(){document.getElementById('navInfo').textContent=`${state.currentSlideIndex+1}/${state.slides.length}`;document.getElementById('btnPrev').disabled=state.currentSlideIndex===0;document.getElementById('btnNext').disabled=state.currentSlideIndex===state.slides.length-1;}
+        
+        async function saveTemplate(){
+            state.templateName=document.getElementById('templateName').value||'Новый шаблон';
+            const template={name:state.templateName,settings:state.settings,slides:state.slides,createdAt:new Date().toISOString()};
+            try{
+                const r=await fetch(`${API_URL}/templates`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(template)});
+                if(r.ok){showToast('Сохранено','success');loadTemplatesList();}else throw new Error();
+            }catch(e){
+                const t=JSON.parse(localStorage.getItem('carousel_templates')||'{}');
+                t[state.templateName]=template;
+                localStorage.setItem('carousel_templates',JSON.stringify(t));
+                showToast('Сохранено локально','success');
             }
         }
-
-        function deleteElement() {
-            if (!state.selectedElementId) return;
-            
-            const slide = state.slides[state.currentSlideIndex];
-            const element = slide.elements.find(el => el.id === state.selectedElementId);
-            
-            // Prevent deleting username and slidenum
-            if (element && (element.type === 'username' || element.type === 'slidenum')) {
-                showToast('Нельзя удалить этот элемент', 'error');
-                return;
-            }
-            
-            slide.elements = slide.elements.filter(el => el.id !== state.selectedElementId);
-            state.selectedElementId = null;
+        
+        async function loadTemplatesList(){
+            const c=document.getElementById('templateList');
+            let templates=[];
+            try{const r=await fetch(`${API_URL}/templates`);if(r.ok){const d=await r.json();templates=d.templates||[];}}catch(e){templates=Object.values(JSON.parse(localStorage.getItem('carousel_templates')||'{}'));}
+            if(templates.length===0)c.innerHTML='<div class="props-hint">Нет шаблонов</div>';
+            else c.innerHTML=templates.map(t=>`<div class="template-item" onclick="loadTemplate('${t.name}')"><div class="template-item-info"><span class="template-item-name">${t.name}</span><span class="template-item-meta">${t.slidesCount||'?'} слайдов</span></div><div class="template-item-actions"><button class="template-item-btn" onclick="exportTemplate('${t.name}',event)">↓</button><button class="template-item-btn delete" onclick="deleteTemplate('${t.name}',event)">×</button></div></div>`).join('');
+        }
+        
+        async function loadTemplate(name){
+            try{const r=await fetch(`${API_URL}/templates/${encodeURIComponent(name)}`);if(r.ok){applyTemplate(await r.json());hideTemplatesModal();return;}}catch(e){}
+            const local=JSON.parse(localStorage.getItem('carousel_templates')||'{}');
+            if(local[name]){applyTemplate(local[name]);hideTemplatesModal();}
+        }
+        
+        function applyTemplate(t){
+            state.templateName=t.name;
+            state.settings=t.settings||{username:'@username',totalSlides:10,endingCount:1};
+            state.slides=t.slides||[];
+            state.currentSlideIndex=0;
+            state.selectedElementId=null;
+            document.getElementById('templateName').value=state.templateName;
             render();
+            showToast('Загружено','success');
         }
-
-        function updateElement(field, value) {
-            if (!state.selectedElementId) return;
-            
-            const slide = state.slides[state.currentSlideIndex];
-            const element = slide.elements.find(el => el.id === state.selectedElementId);
-            
-            if (element) {
-                element[field] = value;
-                renderCanvas();
-            }
-        }
-
-        // ==================== BACKGROUND FUNCTIONS ====================
-        function updateBackground(field, value) {
-            const slide = state.slides[state.currentSlideIndex];
-            slide.background[field] = value;
-            renderCanvas();
-            renderSlidesList();
-        }
-
-        function handlePhotoUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                updateBackground('photo', e.target.result);
-                updateBackground('type', 'photo');
-                render();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function adjustPhotoZoom(delta) {
-            const slide = state.slides[state.currentSlideIndex];
-            let zoom = (slide.background.photoZoom || 1) + delta;
-            zoom = Math.max(1, Math.min(3, zoom));
-            updateBackground('photoZoom', zoom);
-        }
-
-        function resetPhotoPosition() {
-            updateBackground('photoPosition', { x: 50, y: 50 });
-            updateBackground('photoZoom', 1);
-        }
-
-        // ==================== DRAG & DROP ====================
-        function startDrag(elementId, event) {
+        
+        async function exportTemplate(name,event){
             event.stopPropagation();
-            isDragging = true;
-            state.selectedElementId = elementId;
-            
-            const slide = state.slides[state.currentSlideIndex];
-            const element = slide.elements.find(el => el.id === elementId);
-            
-            const canvas = document.getElementById('canvas');
-            const rect = canvas.getBoundingClientRect();
-            
-            dragOffset = {
-                x: event.clientX - rect.left - element.x * SCALE,
-                y: event.clientY - rect.top - element.y * SCALE,
-            };
-            
-            render();
-        }
-
-        function startPhotoDrag(event) {
-            if (event.target.classList.contains('canvas-element')) return;
-            
-            const slide = state.slides[state.currentSlideIndex];
-            if (slide.background.type !== 'photo' || !slide.background.photo) return;
-            
-            isPhotoDragging = true;
-            photoStartPos = {
-                x: event.clientX,
-                y: event.clientY,
-                posX: slide.background.photoPosition?.x || 50,
-                posY: slide.background.photoPosition?.y || 50,
-            };
-            
-            document.getElementById('photoControls').classList.add('show');
-        }
-
-        document.addEventListener('mousemove', (e) => {
-            if (isDragging && state.selectedElementId) {
-                const canvas = document.getElementById('canvas');
-                const rect = canvas.getBoundingClientRect();
-                const slide = state.slides[state.currentSlideIndex];
-                const element = slide.elements.find(el => el.id === state.selectedElementId);
-                
-                if (element) {
-                    element.x = Math.round((e.clientX - rect.left - dragOffset.x) / SCALE);
-                    element.y = Math.round((e.clientY - rect.top - dragOffset.y) / SCALE);
-                    element.x = Math.max(0, Math.min(element.x, CANVAS_W - 50));
-                    element.y = Math.max(0, Math.min(element.y, CANVAS_H - 50));
-                    renderCanvas();
-                }
+            let t;
+            try{const r=await fetch(`${API_URL}/templates/${encodeURIComponent(name)}`);if(r.ok)t=await r.json();}catch(e){}
+            if(!t)t=JSON.parse(localStorage.getItem('carousel_templates')||'{}')[name];
+            if(t){
+                const blob=new Blob([JSON.stringify(t,null,2)],{type:'application/json'});
+                const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${name}.json`;a.click();
+                showToast('Скачано','success');
             }
-            
-            if (isPhotoDragging) {
-                const slide = state.slides[state.currentSlideIndex];
-                const zoom = slide.background.photoZoom || 1;
-                const sensitivity = 0.1 / zoom;
-                
-                let newX = photoStartPos.posX - (e.clientX - photoStartPos.x) * sensitivity;
-                let newY = photoStartPos.posY - (e.clientY - photoStartPos.y) * sensitivity;
-                
-                newX = Math.max(0, Math.min(100, newX));
-                newY = Math.max(0, Math.min(100, newY));
-                
-                slide.background.photoPosition = { x: newX, y: newY };
-                renderCanvas();
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                renderPropsPanel();
-            }
-            isPhotoDragging = false;
-        });
-
-        // ==================== RENDER FUNCTIONS ====================
-        function render() {
-            renderSlidesList();
-            renderCanvas();
-            renderPropsPanel();
-            renderNav();
         }
-
-        function renderSlidesList() {
-            const container = document.getElementById('slidesList');
-            container.innerHTML = state.slides.map((slide, i) => {
-                const bg = slide.background;
-                let bgStyle = bg.color;
-                
-                if (bg.type === 'photo' && bg.photo) {
-                    bgStyle = `url(${bg.photo}) center/cover`;
-                }
-                
-                return `
-                    <div class="slide-item ${i === state.currentSlideIndex ? 'active' : ''}" onclick="selectSlide(${i})">
-                        <div class="slide-item-bg" style="background: ${bgStyle}"></div>
-                        <span class="slide-item-number">${i + 1}</span>
-                        <div class="slide-item-actions">
-                            <button class="slide-item-btn download" onclick="downloadSlide(${i}, event)" title="Скачать">↓</button>
-                            <button class="slide-item-btn delete" onclick="deleteSlide(${i}, event)" title="Удалить">×</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderCanvas() {
-            const canvas = document.getElementById('canvas');
-            const slide = state.slides[state.currentSlideIndex];
-            const bg = slide.background;
-            
-            // Background
-            let bgHtml = '';
-            let overlayHtml = '';
-            
-            if (bg.type === 'photo' && bg.photo) {
-                const pos = bg.photoPosition || { x: 50, y: 50 };
-                const zoom = bg.photoZoom || 1;
-                // Используем cover и смещение для точного соответствия серверному рендерингу
-                const scale = 100 * zoom;
-                bgHtml = `<div class="canvas-bg" style="
-                    background-image: url(${bg.photo});
-                    background-position: ${pos.x}% ${pos.y}%;
-                    background-size: cover;
-                    transform: scale(${zoom});
-                    transform-origin: ${pos.x}% ${pos.y}%;
-                " onmousedown="startPhotoDrag(event)"></div>`;
-                
-                if (bg.overlay > 0) {
-                    if (bg.overlayType === 'gradient') {
-                        overlayHtml = `<div class="canvas-overlay" style="background: linear-gradient(to top, rgba(0,0,0,${bg.overlay/100}) 0%, transparent 60%)"></div>`;
-                    } else {
-                        overlayHtml = `<div class="canvas-overlay" style="background: rgba(0,0,0,${bg.overlay/100})"></div>`;
+        
+        function importTemplate(event){
+            const file=event.target.files[0];if(!file)return;
+            const reader=new FileReader();
+            reader.onload=async e=>{
+                try{
+                    const t=JSON.parse(e.target.result);
+                    try{await fetch(`${API_URL}/templates`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(t)});}catch(err){
+                        const ts=JSON.parse(localStorage.getItem('carousel_templates')||'{}');ts[t.name]=t;localStorage.setItem('carousel_templates',JSON.stringify(ts));
                     }
-                }
-            } else {
-                bgHtml = `<div class="canvas-bg" style="background: ${bg.color}"></div>`;
-            }
-            
-            // Elements
-            const elementsHtml = slide.elements.map(el => {
-                const isSelected = el.id === state.selectedElementId;
-                
-                let content = el.content;
-                
-                // Update username from settings
-                if (el.type === 'username') {
-                    content = state.settings.username;
-                }
-                
-                // Parse highlights: *text* becomes colored
-                const highlightColor = el.highlightColor || '#c8ff00';
-                content = content.replace(/\*([^*]+)\*/g, `<span style="color:${highlightColor}">$1</span>`);
-                content = content.replace(/\n/g, '<br>');
-                
-                let style = `
-                    left: ${el.x * SCALE}px;
-                    top: ${el.y * SCALE}px;
-                    font-family: '${el.fontFamily}', sans-serif;
-                    font-size: ${el.fontSize * SCALE}px;
-                    font-weight: ${el.fontWeight};
-                    color: ${el.color};
-                    opacity: ${el.opacity / 100};
-                    line-height: ${el.lineHeight || 1.2};
-                    ${el.maxWidth ? `max-width: ${el.maxWidth * SCALE}px;` : ''}
-                `;
-                
-                if (el.align === 'right') {
-                    style += `transform: translateX(-100%);`;
-                }
-                
-                return `
-                    <div 
-                        class="canvas-element ${isSelected ? 'selected' : ''}"
-                        style="${style}"
-                        onclick="selectElement('${el.id}', event)"
-                        onmousedown="startDrag('${el.id}', event)"
-                    >${content}</div>
-                `;
-            }).join('');
-            
-            canvas.innerHTML = bgHtml + overlayHtml + elementsHtml;
-            
-            // Show photo controls if photo background
-            const photoControls = document.getElementById('photoControls');
-            if (bg.type === 'photo' && bg.photo) {
-                photoControls.classList.add('show');
-            } else {
-                photoControls.classList.remove('show');
-            }
-        }
-
-        function renderPropsPanel() {
-            const panel = document.getElementById('propsPanel');
-            const slide = state.slides[state.currentSlideIndex];
-            const selectedEl = slide.elements.find(el => el.id === state.selectedElementId);
-            
-            let html = '';
-            
-            // Background section
-            html += `
-                <div class="props-section">
-                    <div class="props-section-header">
-                        <span class="props-section-title">Фон слайда</span>
-                    </div>
-                    
-                    <div class="props-field" style="margin-bottom:16px">
-                        <div class="props-btn-group">
-                            <button class="props-btn ${slide.background.type === 'color' ? 'active' : ''}" onclick="updateBackground('type', 'color')">Цвет</button>
-                            <label class="props-btn ${slide.background.type === 'photo' ? 'active' : ''}" style="cursor:pointer">
-                                Фото
-                                <input type="file" accept="image/*" onchange="handlePhotoUpload(event)" style="display:none">
-                            </label>
-                        </div>
-                    </div>
-                    
-                    ${slide.background.type === 'color' ? `
-                        <div class="props-field">
-                            <label class="props-label">Цвет фона</label>
-                            <div class="props-color-row">
-                                <input type="color" class="props-color" value="${slide.background.color}" onchange="updateBackground('color', this.value)">
-                                <input type="text" class="props-color-value" value="${slide.background.color}" onchange="updateBackground('color', this.value)">
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="props-field">
-                            <label class="props-label">Затемнение</label>
-                            <div class="props-range-container">
-                                <input type="range" class="props-range" min="0" max="100" value="${slide.background.overlay || 0}" onchange="updateBackground('overlay', parseInt(this.value)); this.nextElementSibling.textContent = this.value + '%'">
-                                <span class="props-range-value">${slide.background.overlay || 0}%</span>
-                            </div>
-                        </div>
-                        <div class="props-field">
-                            <label class="props-label">Тип затемнения</label>
-                            <div class="props-btn-group">
-                                <button class="props-btn ${slide.background.overlayType === 'full' ? 'active' : ''}" onclick="updateBackground('overlayType', 'full')">Полное</button>
-                                <button class="props-btn ${slide.background.overlayType === 'gradient' ? 'active' : ''}" onclick="updateBackground('overlayType', 'gradient')">Градиент</button>
-                            </div>
-                        </div>
-                    `}
-                </div>
-            `;
-            
-            // Settings section
-            html += `
-                <div class="props-section">
-                    <div class="props-section-header">
-                        <span class="props-section-title">Настройки</span>
-                    </div>
-                    
-                    <div class="props-field">
-                        <label class="props-label">Никнейм</label>
-                        <input type="text" class="props-input" value="${state.settings.username}" onchange="state.settings.username = this.value; renderCanvas()">
-                    </div>
-                    
-                    <div class="props-field">
-                        <label class="props-label">Всего слайдов (для нумерации)</label>
-                        <input type="number" class="props-input" value="${state.settings.totalSlides}" min="1" max="20" onchange="state.settings.totalSlides = parseInt(this.value); updateSlideNumbers(); renderCanvas()">
-                    </div>
-                </div>
-            `;
-            
-            // Selected element section
-            if (selectedEl) {
-                const isSystem = selectedEl.type === 'username' || selectedEl.type === 'slidenum';
-                const typeLabel = {
-                    'username': 'Никнейм',
-                    'slidenum': 'Нумерация',
-                    'title': 'Заголовок',
-                    'description': 'Описание',
-                }[selectedEl.type] || 'Элемент';
-                
-                html += `
-                    <div class="props-section">
-                        <div class="props-section-header">
-                            <span class="props-section-title">${typeLabel}</span>
-                        </div>
-                        
-                        ${!isSystem ? `
-                            <div class="props-field">
-                                <label class="props-label">Переменная для N8N</label>
-                                <input type="text" class="props-input" value="${selectedEl.varName || ''}" onchange="updateElement('varName', this.value)" placeholder="TITLE_1">
-                            </div>
-                        ` : ''}
-                        
-                        ${selectedEl.type !== 'username' && selectedEl.type !== 'slidenum' ? `
-                            <div class="props-field">
-                                <label class="props-label">Текст (используй *текст* для выделения цветом)</label>
-                                <textarea class="props-input props-textarea" onchange="updateElement('content', this.value)">${selectedEl.content}</textarea>
-                            </div>
-                        ` : ''}
-                        
-                        <div class="props-row">
-                            <div class="props-field">
-                                <label class="props-label">Шрифт</label>
-                                <select class="props-select" onchange="updateElement('fontFamily', this.value)">
-                                    ${FONTS.map(f => `<option value="${f}" ${selectedEl.fontFamily === f ? 'selected' : ''}>${f}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="props-field">
-                                <label class="props-label">Размер</label>
-                                <input type="number" class="props-input" value="${selectedEl.fontSize}" onchange="updateElement('fontSize', parseInt(this.value))">
-                            </div>
-                        </div>
-                        
-                        <div class="props-row">
-                            <div class="props-field">
-                                <label class="props-label">Жирность</label>
-                                <select class="props-select" onchange="updateElement('fontWeight', this.value)">
-                                    ${FONT_WEIGHTS.map(w => `<option value="${w.value}" ${selectedEl.fontWeight === w.value ? 'selected' : ''}>${w.label}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="props-field">
-                                <label class="props-label">Прозрачность</label>
-                                <input type="number" class="props-input" value="${selectedEl.opacity}" min="0" max="100" onchange="updateElement('opacity', parseInt(this.value))">
-                            </div>
-                        </div>
-                        
-                        <div class="props-field">
-                            <label class="props-label">Цвет текста</label>
-                            <div class="props-color-row">
-                                <input type="color" class="props-color" value="${selectedEl.color}" onchange="updateElement('color', this.value)">
-                                <input type="text" class="props-color-value" value="${selectedEl.color}" onchange="updateElement('color', this.value)">
-                            </div>
-                        </div>
-                        
-                        ${selectedEl.type !== 'username' && selectedEl.type !== 'slidenum' ? `
-                            <div class="props-field">
-                                <label class="props-label">Цвет выделения (*текст*)</label>
-                                <div class="props-color-row">
-                                    <input type="color" class="props-color" value="${selectedEl.highlightColor || '#c8ff00'}" onchange="updateElement('highlightColor', this.value)">
-                                    <input type="text" class="props-color-value" value="${selectedEl.highlightColor || '#c8ff00'}" onchange="updateElement('highlightColor', this.value)">
-                                </div>
-                            </div>
-                            
-                            <div class="props-field">
-                                <label class="props-label">Межстрочный интервал</label>
-                                <div class="props-range-container">
-                                    <input type="range" class="props-range" min="0.8" max="2" step="0.05" value="${selectedEl.lineHeight || 1.2}" onchange="updateElement('lineHeight', parseFloat(this.value)); this.nextElementSibling.textContent = this.value">
-                                    <span class="props-range-value">${selectedEl.lineHeight || 1.2}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="props-field">
-                                <label class="props-label">Макс. ширина</label>
-                                <input type="number" class="props-input" value="${selectedEl.maxWidth || ''}" onchange="updateElement('maxWidth', this.value ? parseInt(this.value) : null)" placeholder="Авто">
-                            </div>
-                        ` : ''}
-                        
-                        <div class="props-row">
-                            <div class="props-field">
-                                <label class="props-label">X</label>
-                                <input type="number" class="props-input" value="${selectedEl.x}" onchange="updateElement('x', parseInt(this.value))">
-                            </div>
-                            <div class="props-field">
-                                <label class="props-label">Y</label>
-                                <input type="number" class="props-input" value="${selectedEl.y}" onchange="updateElement('y', parseInt(this.value))">
-                            </div>
-                        </div>
-                        
-                        ${!isSystem ? `
-                            <button class="btn-danger" onclick="deleteElement()">Удалить элемент</button>
-                        ` : ''}
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div class="props-hint">
-                        <div class="props-hint-icon">👆</div>
-                        <p>Выберите элемент на слайде для редактирования</p>
-                    </div>
-                `;
-            }
-            
-            panel.innerHTML = html;
-        }
-
-        function renderNav() {
-            document.getElementById('navInfo').textContent = `${state.currentSlideIndex + 1} / ${state.slides.length}`;
-            document.getElementById('btnPrev').disabled = state.currentSlideIndex === 0;
-            document.getElementById('btnNext').disabled = state.currentSlideIndex === state.slides.length - 1;
-        }
-
-        // ==================== TEMPLATES ====================
-        async function saveTemplate() {
-            state.templateName = document.getElementById('templateName').value || 'Новый шаблон';
-            
-            const template = {
-                name: state.templateName,
-                settings: state.settings,
-                slides: state.slides,
-                createdAt: new Date().toISOString(),
-            };
-            
-            try {
-                const response = await fetch(`${API_URL}/templates`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(template),
-                });
-                
-                if (response.ok) {
-                    showToast('Шаблон сохранён', 'success');
                     loadTemplatesList();
-                } else {
-                    throw new Error('Server error');
-                }
-            } catch (e) {
-                // Save to localStorage as fallback
-                const templates = JSON.parse(localStorage.getItem('carousel_templates') || '{}');
-                templates[state.templateName] = template;
-                localStorage.setItem('carousel_templates', JSON.stringify(templates));
-                showToast('Сохранено локально', 'success');
-            }
+                    showToast('Импортировано','success');
+                }catch(err){showToast('Ошибка','error');}
+            };
+            reader.readAsText(file);
+            event.target.value='';
         }
-
-        async function loadTemplatesList() {
-            const container = document.getElementById('templateList');
-            let templates = [];
-            
-            try {
-                const response = await fetch(`${API_URL}/templates`);
-                if (response.ok) {
-                    const data = await response.json();
-                    templates = data.templates || [];
-                }
-            } catch (e) {
-                // Load from localStorage
-                const local = JSON.parse(localStorage.getItem('carousel_templates') || '{}');
-                templates = Object.values(local);
-            }
-            
-            if (templates.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-templates">
-                        <div class="empty-templates-icon">📁</div>
-                        <p>Нет сохранённых шаблонов</p>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = templates.map(t => `
-                    <div class="template-item" onclick="loadTemplate('${t.name}')">
-                        <div class="template-item-info">
-                            <span class="template-item-name">${t.name}</span>
-                            <span class="template-item-meta">${t.slidesCount || (t.slides?.length || 0)} слайдов</span>
-                        </div>
-                        <button class="template-item-delete" onclick="deleteTemplate('${t.name}', event)">×</button>
-                    </div>
-                `).join('');
-            }
-        }
-
-        async function loadTemplate(name) {
-            try {
-                const response = await fetch(`${API_URL}/templates/${encodeURIComponent(name)}`);
-                if (response.ok) {
-                    const template = await response.json();
-                    applyTemplate(template);
-                    hideTemplatesModal();
-                    return;
-                }
-            } catch (e) {}
-            
-            // Try localStorage
-            const local = JSON.parse(localStorage.getItem('carousel_templates') || '{}');
-            if (local[name]) {
-                applyTemplate(local[name]);
-                hideTemplatesModal();
-            }
-        }
-
-        function applyTemplate(template) {
-            state.templateName = template.name;
-            state.settings = template.settings || { username: '@username', totalSlides: 10 };
-            state.slides = template.slides || [];
-            state.currentSlideIndex = 0;
-            state.selectedElementId = null;
-            
-            document.getElementById('templateName').value = state.templateName;
-            render();
-            showToast('Шаблон загружен', 'success');
-        }
-
-        async function deleteTemplate(name, event) {
+        
+        async function deleteTemplate(name,event){
             event.stopPropagation();
-            
-            if (!confirm(`Удалить шаблон "${name}"?`)) return;
-            
-            try {
-                await fetch(`${API_URL}/templates/${encodeURIComponent(name)}`, { method: 'DELETE' });
-            } catch (e) {}
-            
-            // Also remove from localStorage
-            const local = JSON.parse(localStorage.getItem('carousel_templates') || '{}');
+            if(!confirm(`Удалить "${name}"?`))return;
+            try{await fetch(`${API_URL}/templates/${encodeURIComponent(name)}`,{method:'DELETE'});}catch(e){}
+            const local=JSON.parse(localStorage.getItem('carousel_templates')||'{}');
             delete local[name];
-            localStorage.setItem('carousel_templates', JSON.stringify(local));
-            
+            localStorage.setItem('carousel_templates',JSON.stringify(local));
             loadTemplatesList();
-            showToast('Шаблон удалён', 'success');
+            showToast('Удалено','success');
         }
-
-        function showTemplatesModal() {
-            loadTemplatesList();
-            document.getElementById('templatesModal').classList.add('show');
+        
+        function showTemplatesModal(){loadTemplatesList();document.getElementById('templatesModal').classList.add('show');}
+        function hideTemplatesModal(){document.getElementById('templatesModal').classList.remove('show');}
+        
+        async function downloadSlide(index,event){
+            if(event)event.stopPropagation();
+            try{
+                const r=await fetch(`${API_URL}/render-slide`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slide:state.slides[index],settings:state.settings,slideNumber:index+1})});
+                if(r.ok){const d=await r.json();const a=document.createElement('a');a.href=d.base64;a.download=`slide_${index+1}.png`;a.click();}
+            }catch(e){showToast('Ошибка','error');}
         }
-
-        function hideTemplatesModal() {
-            document.getElementById('templatesModal').classList.remove('show');
+        
+        async function exportAllSlides(){
+            showToast('Экспорт...','success');
+            for(let i=0;i<state.slides.length;i++){await downloadSlide(i);await new Promise(r=>setTimeout(r,300));}
         }
-
-        // ==================== EXPORT ====================
-        async function downloadSlide(index, event) {
-            if (event) event.stopPropagation();
-            showToast('Генерация изображения...', 'success');
-            
-            // For now, use the API to generate
-            try {
-                const response = await fetch(`${API_URL}/render-slide`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        slide: state.slides[index],
-                        settings: state.settings,
-                        slideNumber: index + 1,
-                    }),
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    downloadBase64(data.base64, `slide_${index + 1}.png`);
-                } else {
-                    throw new Error('Server error');
-                }
-            } catch (e) {
-                showToast('Ошибка генерации', 'error');
-            }
-        }
-
-        async function exportAllSlides() {
-            showToast('Генерация всех слайдов...', 'success');
-            
-            for (let i = 0; i < state.slides.length; i++) {
-                await downloadSlide(i);
-                await new Promise(r => setTimeout(r, 500)); // Small delay between downloads
-            }
-        }
-
-        function downloadBase64(base64, filename) {
-            const link = document.createElement('a');
-            link.href = base64;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // ==================== TOAST ====================
-        function showToast(message, type = '') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast show ' + type;
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        // ==================== INIT ====================
+        
+        function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.classList.remove('show'),3000);}
+        
         init();
     </script>
 </body>

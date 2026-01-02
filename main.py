@@ -1,12 +1,9 @@
 """
-Carousel Studio API v4.1
-========================
-Исправлен рендеринг + автозагрузка шрифтов
+Carousel Studio API v5
 """
-
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -17,70 +14,27 @@ import json
 import os
 import io
 import re
-import urllib.request
 from datetime import datetime
 
-app = FastAPI(title="Carousel Studio", version="4.1")
+app = FastAPI(title="Carousel Studio", version="5.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Directories
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 os.makedirs("fonts", exist_ok=True)
 os.makedirs("output", exist_ok=True)
 
-# Canvas dimensions
-CANVAS_W = 1080
-CANVAS_H = 1350
-
-
-# ==================== FONT SETUP ====================
-
-GOOGLE_FONTS = {
-    'Inter': 'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.otf',
-    'Inter-Bold': 'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Bold.otf',
-    'Inter-Medium': 'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Medium.otf',
-    'Inter-SemiBold': 'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-SemiBold.otf',
-    'Inter-Light': 'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Light.otf',
-    'Inter-ExtraBold': 'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-ExtraBold.otf',
-    'Inter-Black': 'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Black.otf',
-}
-
-def download_fonts():
-    """Download fonts if not present"""
-    for name, url in GOOGLE_FONTS.items():
-        ext = url.split('.')[-1]
-        path = f"fonts/{name}.{ext}"
-        if not os.path.exists(path):
-            print(f"Downloading font: {name}")
-            try:
-                urllib.request.urlretrieve(url, path)
-                print(f"  ✓ Downloaded {name}")
-            except Exception as e:
-                print(f"  ✗ Failed to download {name}: {e}")
-
-# Download fonts on startup
-download_fonts()
-
-
-# ==================== MODELS ====================
+CANVAS_W, CANVAS_H = 1080, 1350
 
 class SlideData(BaseModel):
     slide: Dict[str, Any]
     settings: Dict[str, Any]
     slideNumber: int
 
-
 class GenerateRequest(BaseModel):
     template_name: str
+    USERNAME: Optional[str] = None
     slides: Optional[List[Dict[str, Any]]] = None
-
 
 class TemplateData(BaseModel):
     name: str
@@ -88,178 +42,145 @@ class TemplateData(BaseModel):
     slides: List[Dict[str, Any]]
     createdAt: Optional[str] = None
 
-
-# ==================== GENERATOR ====================
-
 class SlideRenderer:
     def __init__(self):
         self.font_cache = {}
     
-    def get_font(self, family: str, size: int, weight: str = '400') -> ImageFont.FreeTypeFont:
-        """Get font with caching"""
-        weight_map = {
-            '300': 'Light', '400': 'Regular', '500': 'Medium',
-            '600': 'SemiBold', '700': 'Bold', '800': 'ExtraBold', '900': 'Black',
-        }
+    def get_font(self, family: str, size: int, weight: str = '400'):
+        weight_map = {'300': 'Light', '400': 'Regular', '500': 'Medium', '600': 'SemiBold', '700': 'Bold', '800': 'ExtraBold', '900': 'Black'}
         weight_name = weight_map.get(str(weight), 'Regular')
-        
-        # For Inter, use specific weight files
-        if family == 'Inter' and weight_name != 'Regular':
-            font_name = f"Inter-{weight_name}"
-        else:
-            font_name = family
-        
+        font_name = f"Inter-{weight_name}" if family == 'Inter' and weight_name != 'Regular' else family
         key = f"{font_name}_{size}"
         
         if key not in self.font_cache:
-            # Try different paths
-            paths = [
-                f"fonts/{font_name}.otf",
-                f"fonts/{font_name}.ttf",
-                f"fonts/Inter.otf",
-                f"fonts/Inter-Regular.otf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if weight_name in ['Bold', 'ExtraBold', 'Black', 'SemiBold'] else None,
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            ]
-            
+            paths = [f"fonts/{font_name}.otf", f"fonts/{font_name}.ttf", "fonts/Inter.otf", "fonts/Inter-Regular.otf",
+                     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if weight_name in ['Bold', 'ExtraBold', 'Black', 'SemiBold'] else None,
+                     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
             for path in paths:
                 if path and os.path.exists(path):
                     try:
                         self.font_cache[key] = ImageFont.truetype(path, size)
                         break
-                    except Exception as e:
-                        continue
-            
+                    except: continue
             if key not in self.font_cache:
                 self.font_cache[key] = ImageFont.load_default()
-        
         return self.font_cache[key]
     
-    def load_image(self, source: str) -> Optional[Image.Image]:
-        """Load image from URL or base64"""
-        if not source:
-            return None
-        
+    def load_image(self, source: str):
+        if not source: return None
         try:
             if source.startswith('data:'):
-                header, data = source.split(',', 1)
-                img_data = base64.b64decode(data)
-                return Image.open(io.BytesIO(img_data))
+                _, data = source.split(',', 1)
+                return Image.open(io.BytesIO(base64.b64decode(data)))
             elif source.startswith('http'):
-                response = requests.get(source, timeout=30)
-                response.raise_for_status()
-                return Image.open(io.BytesIO(response.content))
+                r = requests.get(source, timeout=30)
+                r.raise_for_status()
+                return Image.open(io.BytesIO(r.content))
         except Exception as e:
             print(f"Error loading image: {e}")
         return None
     
     def create_background(self, bg: dict) -> Image.Image:
-        """Create slide background"""
         color = bg.get('color', '#ffffff')
-        if color.startswith('#'):
-            r = int(color[1:3], 16)
-            g = int(color[3:5], 16)
-            b = int(color[5:7], 16)
-            color_tuple = (r, g, b)
-        else:
-            color_tuple = (255, 255, 255)
-        
-        canvas = Image.new('RGB', (CANVAS_W, CANVAS_H), color_tuple)
+        try:
+            r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+        except:
+            r, g, b = 255, 255, 255
+        canvas = Image.new('RGB', (CANVAS_W, CANVAS_H), (r, g, b))
         
         if bg.get('type') == 'photo' and bg.get('photo'):
             img = self.load_image(bg['photo'])
             if img:
                 pos = bg.get('photoPosition', {'x': 50, 'y': 50})
-                zoom = bg.get('photoZoom', 1)
-                zoom = max(1, zoom)
+                zoom = max(1, bg.get('photoZoom', 1))
                 
-                # Сначала масштабируем как cover (заполняем весь canvas)
                 img_ratio = img.width / img.height
                 canvas_ratio = CANVAS_W / CANVAS_H
                 
                 if img_ratio > canvas_ratio:
-                    # Изображение шире - подгоняем по высоте
-                    base_height = CANVAS_H
-                    base_width = int(base_height * img_ratio)
+                    base_height, base_width = CANVAS_H, int(CANVAS_H * img_ratio)
                 else:
-                    # Изображение выше - подгоняем по ширине
-                    base_width = CANVAS_W
-                    base_height = int(base_width / img_ratio)
+                    base_width, base_height = CANVAS_W, int(CANVAS_W / img_ratio)
                 
-                # Применяем zoom
-                new_width = int(base_width * zoom)
-                new_height = int(base_height * zoom)
-                
+                new_width, new_height = int(base_width * zoom), int(base_height * zoom)
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 
-                # Вычисляем смещение на основе позиции (0-100%)
-                # pos.x = 50 означает центр, pos.x = 0 - левый край, pos.x = 100 - правый край
-                max_offset_x = max(0, new_width - CANVAS_W)
-                max_offset_y = max(0, new_height - CANVAS_H)
-                
-                offset_x = int(max_offset_x * pos.get('x', 50) / 100)
-                offset_y = int(max_offset_y * pos.get('y', 50) / 100)
-                
-                # Обрезаем до размера canvas
+                offset_x = int(max(0, new_width - CANVAS_W) * pos.get('x', 50) / 100)
+                offset_y = int(max(0, new_height - CANVAS_H) * pos.get('y', 50) / 100)
                 img = img.crop((offset_x, offset_y, offset_x + CANVAS_W, offset_y + CANVAS_H))
                 
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                
+                if img.mode != 'RGB': img = img.convert('RGB')
                 canvas = img
                 
-                # Затемнение
                 overlay = bg.get('overlay', 0)
                 if overlay > 0:
                     canvas = canvas.convert('RGBA')
-                    overlay_type = bg.get('overlayType', 'gradient')
-                    
-                    if overlay_type == 'gradient':
-                        # Градиент снизу вверх до 60%
+                    if bg.get('overlayType') == 'gradient':
                         gradient = Image.new('RGBA', (CANVAS_W, CANVAS_H), (0, 0, 0, 0))
                         draw = ImageDraw.Draw(gradient)
-                        
-                        # Градиент от низа (100%) до 40% высоты (0% прозрачности)
                         for y in range(CANVAS_H):
-                            # Прогресс от 0 (верх) до 1 (низ)
-                            progress_from_bottom = y / CANVAS_H
-                            # Градиент начинается с 40% высоты
-                            if progress_from_bottom > 0.4:
-                                # Нормализуем: 0.4->0, 1.0->1
-                                gradient_progress = (progress_from_bottom - 0.4) / 0.6
-                                alpha = int(255 * overlay / 100 * gradient_progress)
+                            if y / CANVAS_H > 0.4:
+                                alpha = int(255 * overlay / 100 * ((y / CANVAS_H - 0.4) / 0.6))
                                 draw.line([(0, y), (CANVAS_W, y)], fill=(0, 0, 0, alpha))
-                        
                         canvas = Image.alpha_composite(canvas, gradient)
                     else:
-                        # Полное затемнение
-                        alpha = int(255 * overlay / 100)
-                        overlay_layer = Image.new('RGBA', (CANVAS_W, CANVAS_H), (0, 0, 0, alpha))
-                        canvas = Image.alpha_composite(canvas, overlay_layer)
-                    
+                        canvas = Image.alpha_composite(canvas, Image.new('RGBA', (CANVAS_W, CANVAS_H), (0, 0, 0, int(255 * overlay / 100))))
                     canvas = canvas.convert('RGB')
-        
         return canvas
     
-    def parse_color(self, color: str) -> tuple:
-        """Parse hex color to RGB tuple"""
-        if not color:
-            return (0, 0, 0)
+    def parse_color(self, color: str):
+        if not color: return (0, 0, 0)
         color = color.lstrip('#')
-        if len(color) != 6:
-            return (0, 0, 0)
-        try:
-            return tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-        except:
-            return (0, 0, 0)
+        try: return tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+        except: return (0, 0, 0)
     
-    def draw_text_element(self, img: Image.Image, el: dict, settings: dict, slide_num: int):
-        """Draw text element with highlight support"""
-        draw = ImageDraw.Draw(img)
+    def draw_photo_element(self, canvas: Image.Image, el: dict):
+        if not el.get('photo'): return
+        img = self.load_image(el['photo'])
+        if not img: return
+        
+        x, y = int(el.get('x', 0)), int(el.get('y', 0))
+        w, h = int(el.get('width', 300)), int(el.get('height', 300))
+        border_radius = el.get('borderRadius', 0)
+        
+        # Resize image to cover the element (maintain aspect ratio)
+        img_ratio = img.width / img.height
+        el_ratio = w / h
+        
+        if img_ratio > el_ratio:
+            new_h = h
+            new_w = int(h * img_ratio)
+        else:
+            new_w = w
+            new_h = int(w / img_ratio)
+        
+        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        
+        # Center crop
+        left = (new_w - w) // 2
+        top = (new_h - h) // 2
+        img = img.crop((left, top, left + w, top + h))
+        
+        # Apply border radius if needed
+        if border_radius > 0:
+            img = img.convert('RGBA')
+            mask = Image.new('L', (w, h), 0)
+            draw = ImageDraw.Draw(mask)
+            radius = int(min(w, h) * border_radius / 100)
+            draw.rounded_rectangle([0, 0, w, h], radius=radius, fill=255)
+            img.putalpha(mask)
+            canvas.paste(img, (x, y), img)
+        else:
+            if img.mode == 'RGBA':
+                canvas.paste(img, (x, y), img)
+            else:
+                canvas.paste(img, (x, y))
+    
+    def draw_text_element(self, canvas: Image.Image, el: dict, settings: dict, slide_num: int, username_override: str = None):
+        draw = ImageDraw.Draw(canvas)
         
         content = el.get('content', '')
-        x = int(el.get('x', 0))
-        y = int(el.get('y', 0))
+        x, y = int(el.get('x', 0)), int(el.get('y', 0))
         font_family = el.get('fontFamily', 'Inter')
         font_size = int(el.get('fontSize', 48))
         font_weight = str(el.get('fontWeight', '400'))
@@ -267,16 +188,13 @@ class SlideRenderer:
         highlight_color = el.get('highlightColor', '#c8ff00')
         opacity = float(el.get('opacity', 100)) / 100
         line_height = float(el.get('lineHeight', 1.2))
-        max_width = el.get('maxWidth')
-        if max_width:
-            max_width = int(max_width)
+        max_width = int(el.get('maxWidth')) if el.get('maxWidth') else None
         align = el.get('align', 'left')
         
         if el.get('type') == 'username':
-            content = settings.get('username', '@username')
+            content = username_override or settings.get('username', '@username')
         elif el.get('type') == 'slidenum':
-            total = settings.get('totalSlides', 10)
-            content = f"{slide_num}/{total}"
+            content = f"{slide_num}/{settings.get('totalSlides', 10)}"
         
         font = self.get_font(font_family, font_size, font_weight)
         base_color = self.parse_color(color)
@@ -286,234 +204,207 @@ class SlideRenderer:
             base_color = tuple(int(c * opacity) for c in base_color)
             hl_color = tuple(int(c * opacity) for c in hl_color)
         
+        # Parse highlights
         segments = []
         pattern = r'\*([^*]+)\*'
         last_end = 0
-        
         for match in re.finditer(pattern, content):
             if match.start() > last_end:
-                segments.append({'text': content[last_end:match.start()], 'highlight': False})
-            segments.append({'text': match.group(1), 'highlight': True})
+                segments.append({'text': content[last_end:match.start()], 'hl': False})
+            segments.append({'text': match.group(1), 'hl': True})
             last_end = match.end()
-        
         if last_end < len(content):
-            segments.append({'text': content[last_end:], 'highlight': False})
-        
+            segments.append({'text': content[last_end:], 'hl': False})
         if not segments:
-            segments = [{'text': content, 'highlight': False}]
+            segments = [{'text': content, 'hl': False}]
         
+        # Word wrap
         lines = []
-        current_line_words = []
-        current_line_segments = []
+        current_words, current_segs = [], []
         
         for seg in segments:
-            parts = seg['text'].split('\n')
-            for pi, part in enumerate(parts):
+            for pi, part in enumerate(seg['text'].split('\n')):
                 if pi > 0:
-                    lines.append(current_line_segments)
-                    current_line_words = []
-                    current_line_segments = []
-                
-                words = part.split(' ')
-                for word in words:
-                    if not word:
-                        continue
-                    
-                    test_words = current_line_words + [word]
-                    test_text = ' '.join(test_words)
-                    bbox = draw.textbbox((0, 0), test_text, font=font)
-                    text_width = bbox[2] - bbox[0]
-                    
-                    if max_width and text_width > max_width and current_line_words:
-                        lines.append(current_line_segments)
-                        current_line_words = [word]
-                        current_line_segments = [{'text': word, 'highlight': seg['highlight']}]
+                    lines.append(current_segs)
+                    current_words, current_segs = [], []
+                for word in part.split(' '):
+                    if not word: continue
+                    test = ' '.join(current_words + [word])
+                    bbox = draw.textbbox((0, 0), test, font=font)
+                    if max_width and bbox[2] - bbox[0] > max_width and current_words:
+                        lines.append(current_segs)
+                        current_words, current_segs = [word], [{'text': word, 'hl': seg['hl']}]
                     else:
-                        if current_line_words:
-                            current_line_segments.append({'text': ' ', 'highlight': False})
-                        current_line_words.append(word)
-                        current_line_segments.append({'text': word, 'highlight': seg['highlight']})
+                        if current_words:
+                            current_segs.append({'text': ' ', 'hl': False})
+                        current_words.append(word)
+                        current_segs.append({'text': word, 'hl': seg['hl']})
+        if current_segs:
+            lines.append(current_segs)
         
-        if current_line_segments:
-            lines.append(current_line_segments)
-        
-        current_y = y
-        for line_segments in lines:
-            if not line_segments:
-                current_y += int(font_size * line_height)
+        # Render
+        curr_y = y
+        for line_segs in lines:
+            if not line_segs:
+                curr_y += int(font_size * line_height)
                 continue
-            
-            line_text = ''.join(s['text'] for s in line_segments)
+            line_text = ''.join(s['text'] for s in line_segs)
             bbox = draw.textbbox((0, 0), line_text, font=font)
-            line_width = bbox[2] - bbox[0]
+            line_w = bbox[2] - bbox[0]
             
-            if align == 'right':
-                current_x = x - line_width
-            elif align == 'center':
-                current_x = x - line_width // 2
-            else:
-                current_x = x
+            curr_x = x - line_w if align == 'right' else (x - line_w // 2 if align == 'center' else x)
             
-            for seg in line_segments:
-                text = seg['text']
-                col = hl_color if seg['highlight'] else base_color
-                draw.text((current_x, current_y), text, font=font, fill=col)
-                
-                bbox = draw.textbbox((0, 0), text, font=font)
-                current_x += bbox[2] - bbox[0]
-            
-            current_y += int(font_size * line_height)
+            for seg in line_segs:
+                col = hl_color if seg['hl'] else base_color
+                draw.text((curr_x, curr_y), seg['text'], font=font, fill=col)
+                bbox = draw.textbbox((0, 0), seg['text'], font=font)
+                curr_x += bbox[2] - bbox[0]
+            curr_y += int(font_size * line_height)
     
-    def render_slide(self, slide: dict, settings: dict, slide_num: int) -> Image.Image:
-        """Render a single slide"""
+    def render_slide(self, slide: dict, settings: dict, slide_num: int, username_override: str = None) -> Image.Image:
         canvas = self.create_background(slide.get('background', {}))
-        
-        elements = slide.get('elements', [])
-        for el in elements:
-            self.draw_text_element(canvas, el, settings, slide_num)
-        
+        for el in slide.get('elements', []):
+            if el.get('type') == 'photo':
+                self.draw_photo_element(canvas, el)
+            else:
+                self.draw_text_element(canvas, el, settings, slide_num, username_override)
         return canvas
 
-
 renderer = SlideRenderer()
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-# ==================== ROUTES ====================
 
 @app.get("/")
 async def index():
     return FileResponse("static/index.html")
 
-
 @app.get("/health")
 async def health():
-    return {
-        "status": "healthy", 
-        "version": "4.1", 
-        "fonts": os.listdir("fonts") if os.path.exists("fonts") else []
-    }
-
+    return {"status": "healthy", "version": "5.0", "fonts": os.listdir("fonts") if os.path.exists("fonts") else []}
 
 @app.get("/templates")
 async def list_templates():
     templates = []
-    for filename in os.listdir("templates"):
-        if filename.endswith('.json'):
+    for f in os.listdir("templates"):
+        if f.endswith('.json'):
             try:
-                with open(f"templates/{filename}", 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    templates.append({
-                        "name": data.get('name', filename.replace('.json', '')),
-                        "createdAt": data.get('createdAt', ''),
-                        "slidesCount": len(data.get('slides', [])),
-                    })
-            except:
-                pass
+                with open(f"templates/{f}", 'r', encoding='utf-8') as file:
+                    d = json.load(file)
+                    templates.append({"name": d.get('name', f.replace('.json', '')), "createdAt": d.get('createdAt', ''), "slidesCount": len(d.get('slides', []))})
+            except: pass
     return {"templates": templates}
-
 
 @app.get("/templates/{name}")
 async def get_template(name: str):
-    safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
-    path = f"templates/{safe_name}.json"
+    safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
+    path = f"templates/{safe}.json"
     if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="Template not found")
+        raise HTTPException(status_code=404, detail="Not found")
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-
 @app.post("/templates")
 async def save_template(template: TemplateData):
-    template_dict = template.dict()
-    template_dict['createdAt'] = datetime.now().isoformat()
-    safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', template.name)
-    path = f"templates/{safe_name}.json"
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(template_dict, f, ensure_ascii=False, indent=2)
+    t = template.dict()
+    t['createdAt'] = datetime.now().isoformat()
+    safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', template.name)
+    with open(f"templates/{safe}.json", 'w', encoding='utf-8') as f:
+        json.dump(t, f, ensure_ascii=False, indent=2)
     return {"success": True, "name": template.name}
-
 
 @app.delete("/templates/{name}")
 async def delete_template(name: str):
-    safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
-    path = f"templates/{safe_name}.json"
+    safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
+    path = f"templates/{safe}.json"
     if os.path.exists(path):
         os.remove(path)
         return {"success": True}
-    raise HTTPException(status_code=404, detail="Template not found")
-
+    raise HTTPException(status_code=404, detail="Not found")
 
 @app.post("/render-slide")
 async def render_slide(data: SlideData):
     try:
         img = renderer.render_slide(data.slide, data.settings, data.slideNumber)
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        b64 = base64.b64encode(buffer.getvalue()).decode()
-        return {"success": True, "base64": f"data:image/png;base64,{b64}"}
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return {"success": True, "base64": f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.post("/generate")
 async def generate_carousel(request: GenerateRequest):
-    safe_name = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', request.template_name)
-    path = f"templates/{safe_name}.json"
-    
+    safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', request.template_name)
+    path = f"templates/{safe}.json"
     if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail=f"Template not found")
+        raise HTTPException(status_code=404, detail="Template not found")
     
     with open(path, 'r', encoding='utf-8') as f:
         template = json.load(f)
     
     settings = template.get('settings', {})
     slides = template.get('slides', [])
+    username_override = request.USERNAME
     
+    # Build final slides based on structure
     if request.slides:
+        intro_slides = [s for s in slides if s.get('type') == 'intro']
+        content_slides = [s for s in slides if s.get('type') == 'content']
+        ending_slides = [s for s in slides if s.get('type') == 'ending']
+        
+        final_slides = []
+        content_index = 0
+        
         for i, slide_vars in enumerate(request.slides):
-            if i < len(slides):
-                slide = slides[i]
-                if 'PHOTO' in slide_vars:
-                    slide['background']['photo'] = slide_vars['PHOTO']
-                    slide['background']['type'] = 'photo'
-                for el in slide.get('elements', []):
-                    var_name = el.get('varName', '')
-                    if var_name and var_name in slide_vars:
+            if i == 0 and intro_slides:
+                slide = json.loads(json.dumps(intro_slides[0]))
+            elif i >= len(request.slides) - len(ending_slides) and ending_slides:
+                ending_idx = i - (len(request.slides) - len(ending_slides))
+                if ending_idx < len(ending_slides):
+                    slide = json.loads(json.dumps(ending_slides[ending_idx]))
+                else:
+                    slide = json.loads(json.dumps(content_slides[0] if content_slides else slides[0]))
+            else:
+                slide = json.loads(json.dumps(content_slides[0] if content_slides else slides[0]))
+            
+            # Apply variables
+            if 'PHOTO' in slide_vars:
+                slide['background']['photo'] = slide_vars['PHOTO']
+                slide['background']['type'] = 'photo'
+            
+            for el in slide.get('elements', []):
+                var_name = el.get('varName', '')
+                if var_name and var_name in slide_vars:
+                    if el.get('type') == 'photo':
+                        el['photo'] = slide_vars[var_name]
+                    else:
                         el['content'] = slide_vars[var_name]
-                    if f"{var_name}_COLOR" in slide_vars:
-                        el['highlightColor'] = slide_vars[f"{var_name}_COLOR"]
+                if f"{var_name}_COLOR" in slide_vars:
+                    el['highlightColor'] = slide_vars[f"{var_name}_COLOR"]
+            
+            final_slides.append(slide)
+        
+        slides = final_slides
     
+    # Render
     results = []
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     for i, slide in enumerate(slides):
-        img = renderer.render_slide(slide, settings, i + 1)
-        filename = f"carousel_{timestamp}_{i+1}.png"
-        filepath = f"output/{filename}"
-        img.save(filepath, "PNG")
+        img = renderer.render_slide(slide, settings, i + 1, username_override)
+        filename = f"carousel_{ts}_{i+1}.png"
+        img.save(f"output/{filename}", "PNG")
         
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        b64 = base64.b64encode(buffer.getvalue()).decode()
-        
-        results.append({
-            "slide_number": i + 1,
-            "filename": filename,
-            "base64": f"data:image/png;base64,{b64}"
-        })
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        results.append({"slide_number": i + 1, "filename": filename, "base64": f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"})
     
     return {"success": True, "slides": results}
-
 
 @app.get("/output/{filename}")
 async def get_output(filename: str):
     path = f"output/{filename}"
     if os.path.exists(path):
         return FileResponse(path, media_type="image/png")
-    raise HTTPException(status_code=404, detail="File not found")
-
+    raise HTTPException(status_code=404, detail="Not found")
 
 if __name__ == "__main__":
     import uvicorn
