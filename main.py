@@ -1,5 +1,5 @@
-"""Carousel Studio API v6 - Complete Edition
-Сохраняет ВСЕ функции оригинала + добавляет MP4 генерацию
+"""Carousel Studio API v6 - Photo Only Edition
+Оригинал + динамический SLIDENUM (без видео!)
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -15,9 +15,6 @@ import os
 import io
 import re
 import uuid
-import shutil
-from datetime import datetime, timedelta
-import subprocess
 
 app = FastAPI(title="Carousel Studio", version="6.0")
 
@@ -28,23 +25,20 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Directories (+ videos для MP4)
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 os.makedirs("fonts", exist_ok=True)
 os.makedirs("output", exist_ok=True)
-os.makedirs("videos", exist_ok=True)  # НОВОЕ
 
 CANVAS_W, CANVAS_H = 1080, 1350
 
 
 class GenerateRequest(BaseModel):
-    template_name: Optional[str] = None  # Старый формат
-    template_id: Optional[str] = None    # Новый формат (алиас)
-    USERNAME: Optional[str] = None       # Старый формат
-    username: Optional[str] = None       # Новый формат (алиас)
+    template_name: Optional[str] = None
+    template_id: Optional[str] = None  # Алиас
+    USERNAME: Optional[str] = None
+    username: Optional[str] = None  # Алиас
     slides: Optional[List[Dict[str, Any]]] = None
-    return_format: Optional[str] = "video"  # НОВОЕ: "base64" или "video"
 
 
 class SlideData(BaseModel):
@@ -65,7 +59,6 @@ class SlideRenderer:
         self.font_cache = {}
 
     def get_font(self, family: str, size: int, weight: str = '400'):
-        # ОРИГИНАЛ: Полная weight_map
         weight_map = {
             '300': 'Light', '400': 'Regular', '500': 'Medium',
             '600': 'SemiBold', '700': 'Bold', '800': 'ExtraBold', '900': 'Black'
@@ -97,7 +90,6 @@ class SlideRenderer:
         return self.font_cache[key]
 
     def load_image(self, source: str):
-        # ОРИГИНАЛ: data: и http поддержка
         if not source:
             return None
         try:
@@ -113,7 +105,6 @@ class SlideRenderer:
             return None
 
     def create_background(self, bg: dict) -> Image.Image:
-        # ОРИГИНАЛ: Полная логика с фото, цветом, overlay, gradient
         color = bg.get('color', '#ffffff')
         try:
             r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
@@ -122,7 +113,6 @@ class SlideRenderer:
 
         canvas = Image.new('RGB', (CANVAS_W, CANVAS_H), (r, g, b))
 
-        # Фото фон
         if bg.get('type') == 'photo' and bg.get('photo'):
             img = self.load_image(bg['photo'])
             if img:
@@ -148,7 +138,6 @@ class SlideRenderer:
                     img = img.convert('RGB')
                 canvas = img
 
-        # Overlay (градиент или полный)
         overlay = bg.get('overlay', 0)
         if overlay > 0:
             canvas = canvas.convert('RGBA')
@@ -176,7 +165,6 @@ class SlideRenderer:
             return (0, 0, 0)
 
     def draw_photo_element(self, canvas: Image.Image, el: dict):
-        # ОРИГИНАЛ: Фото элементы с border-radius
         if not el.get('photo'):
             return
 
@@ -219,7 +207,6 @@ class SlideRenderer:
                 canvas.paste(img, (x, y))
 
     def draw_text_element(self, canvas: Image.Image, el: dict, settings: dict, slide_num: int, total_slides: int, username_override: str = None):
-        # ОРИГИНАЛ: Полная логика текста с подсветкой, переносом, выравниванием
         draw = ImageDraw.Draw(canvas)
         content = el.get('content', '')
 
@@ -234,11 +221,10 @@ class SlideRenderer:
         max_width = int(el.get('maxWidth')) if el.get('maxWidth') else None
         align = el.get('align', 'left')
 
-        # USERNAME и SLIDENUM (ОРИГИНАЛ)
         if el.get('type') == 'username':
             content = username_override or settings.get('username', '@username')
         elif el.get('type') == 'slidenum':
-            # НОВОЕ: автоподсчёт вместо фиксированного
+            # ЕДИНСТВЕННОЕ УЛУЧШЕНИЕ: динамический подсчёт
             content = f"{slide_num}/{total_slides}"
 
         font = self.get_font(font_family, font_size, font_weight)
@@ -250,7 +236,6 @@ class SlideRenderer:
             base_color = tuple(int(c * opacity) for c in base_color)
             hl_color = tuple(int(c * opacity) for c in hl_color)
 
-        # Парсинг *подсветки* (ОРИГИНАЛ)
         segments = []
         pattern = r'\*([^*]+)\*'
         last_end = 0
@@ -265,7 +250,6 @@ class SlideRenderer:
         if not segments:
             segments = [{'text': content, 'hl': False}]
 
-        # Word wrap (ОРИГИНАЛ)
         lines = []
         current_words, current_segs = [], []
         for seg in segments:
@@ -289,7 +273,6 @@ class SlideRenderer:
         if current_segs:
             lines.append(current_segs)
 
-        # Рендеринг с выравниванием (ОРИГИНАЛ)
         curr_y = y
         for line_segs in lines:
             if not line_segs:
@@ -341,27 +324,8 @@ async def health():
     }
 
 
-# НОВОЕ: cleanup old videos
-def cleanup_old_videos():
-    """Удаляет видео старше 24 часов"""
-    now = datetime.now()
-    if not os.path.exists("videos"):
-        return
-    for filename in os.listdir("videos"):
-        filepath = os.path.join("videos", filename)
-        if os.path.isfile(filepath):
-            file_time = datetime.fromtimestamp(os.path.getmtime(filepath))
-            if now - file_time > timedelta(hours=24):
-                try:
-                    os.remove(filepath)
-                    print(f"Deleted old video: {filename}")
-                except Exception as e:
-                    print(f"Error deleting {filename}: {e}")
-
-
 @app.get("/templates")
 async def list_templates():
-    # ОРИГИНАЛ
     templates = []
     for f in os.listdir("templates"):
         if f.endswith('.json'):
@@ -380,7 +344,6 @@ async def list_templates():
 
 @app.get("/templates/{name}")
 async def get_template(name: str):
-    # ОРИГИНАЛ
     safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
     path = f"templates/{safe}.json"
     if not os.path.exists(path):
@@ -391,7 +354,7 @@ async def get_template(name: str):
 
 @app.post("/templates")
 async def save_template(template: TemplateData):
-    # ОРИГИНАЛ
+    from datetime import datetime
     t = template.dict()
     t['createdAt'] = datetime.now().isoformat()
     safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', template.name)
@@ -402,7 +365,6 @@ async def save_template(template: TemplateData):
 
 @app.delete("/templates/{name}")
 async def delete_template(name: str):
-    # ОРИГИНАЛ
     safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', name)
     path = f"templates/{safe}.json"
     if os.path.exists(path):
@@ -413,7 +375,6 @@ async def delete_template(name: str):
 
 @app.post("/render-slide")
 async def render_slide(data: SlideData):
-    # ОРИГИНАЛ
     try:
         img = renderer.render_slide(data.slide, data.settings, data.slideNumber, 10)
         buf = io.BytesIO()
@@ -429,23 +390,16 @@ async def render_slide(data: SlideData):
 @app.post("/generate")
 async def generate_carousel(request: GenerateRequest):
     """
-    ПОЛНАЯ генерация с поддержкой:
-    - Старый формат (template_name, USERNAME, base64)
-    - Новый формат (template_id, username, video URL)
-    - {VARNAME}_COLOR
-    - PHOTO для background
-    - Intro/Content/Ending
+    Генерация ФОТОК для карусели
+    Возвращает массив base64 изображений
     """
-    cleanup_old_videos()
-
-    # Поддержка старого и нового API
+    # Поддержка старого и нового формата
     template_name = request.template_id or request.template_name
     username = request.username or request.USERNAME or "@username"
 
     if not template_name:
         raise HTTPException(status_code=400, detail="template_name or template_id required")
 
-    # Загружаем шаблон
     safe = re.sub(r'[^a-zA-Z0-9_\-а-яА-ЯёЁ]', '_', template_name)
     path = f"templates/{safe}.json"
     if not os.path.exists(path):
@@ -460,7 +414,7 @@ async def generate_carousel(request: GenerateRequest):
     result_slides = []
 
     if request.slides:
-        # ОРИГИНАЛЬНАЯ ЛОГИКА (полностью сохранена!)
+        # Оригинальная логика intro/content/ending
         intro_slides = [s for s in slides if s.get('type') == 'intro']
         content_slides = [s for s in slides if s.get('type') == 'content']
         ending_slides = [s for s in slides if s.get('type') == 'ending']
@@ -468,10 +422,10 @@ async def generate_carousel(request: GenerateRequest):
         if not content_slides:
             content_slides = [s for s in slides if s.get('type') != 'ending']
 
+        # УЛУЧШЕНИЕ: Динамический подсчёт
         total_slides = len(request.slides) + len(intro_slides) + len(ending_slides)
 
         for i, slide_vars in enumerate(request.slides):
-            # Выбираем тип слайда (ОРИГИНАЛ)
             if i == 0 and intro_slides:
                 base_slide = intro_slides[0]
             elif ending_slides and i >= len(request.slides) - len(ending_slides):
@@ -480,28 +434,25 @@ async def generate_carousel(request: GenerateRequest):
             else:
                 base_slide = content_slides[0]
 
-            # Deep copy (ОРИГИНАЛ)
             slide = json.loads(json.dumps(base_slide))
 
-            # ОРИГИНАЛ: PHOTO для background (КРИТИЧНО!)
+            # PHOTO для background
             if 'PHOTO' in slide_vars and slide.get('background', {}).get('type') == 'photo':
                 slide['background']['photo'] = slide_vars['PHOTO']
 
-            # Применяем varName (ОРИГИНАЛ + улучшения)
+            # varName + {VARNAME}_COLOR
             for el in slide.get('elements', []):
                 var_name = el.get('varName', '')
 
                 if not var_name:
                     continue
 
-                # Поиск значения (case-insensitive)
                 value = None
                 color_value = None
 
                 for key, val in slide_vars.items():
                     if key.upper() == var_name.upper():
                         value = val
-                    # ОРИГИНАЛ: {VARNAME}_COLOR (КРИТИЧНО!)
                     elif key.upper() == f"{var_name.upper()}_COLOR":
                         color_value = val
 
@@ -511,112 +462,42 @@ async def generate_carousel(request: GenerateRequest):
                     else:
                         el['content'] = value
 
-                # Применяем кастомный цвет подсветки
                 if color_value:
                     el['highlightColor'] = color_value
 
             result_slides.append(slide)
     else:
-        # Без переменных
         result_slides = slides
         total_slides = len(slides)
 
-    # Рендерим слайды
+    # Рендерим ФОТКИ
     rendered = []
-    temp_dir = None
 
     for i, slide in enumerate(result_slides):
         img = renderer.render_slide(slide, settings, i + 1, total_slides, username)
 
-        # Формат вывода
-        if request.return_format == "video":
-            # НОВОЕ: Генерация MP4
-            if temp_dir is None:
-                video_id = str(uuid.uuid4())[:8]
-                temp_dir = f"output/{video_id}"
-                os.makedirs(temp_dir, exist_ok=True)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode()
 
-            img.save(f"{temp_dir}/slide_{i:03d}.png", "PNG")
-        else:
-            # ОРИГИНАЛ: base64 + filename
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            b64 = base64.b64encode(buf.getvalue()).decode()
+        filename = f"slide_{i+1}_{uuid.uuid4().hex[:8]}.png"
+        with open(f"output/{filename}", 'wb') as f:
+            f.write(buf.getvalue())
 
-            filename = f"slide_{i+1}_{uuid.uuid4().hex[:8]}.png"
-            with open(f"output/{filename}", 'wb') as f:
-                f.write(buf.getvalue())
+        rendered.append({
+            "slide_number": i + 1,
+            "base64": f"data:image/png;base64,{b64}",
+            "filename": filename
+        })
 
-            rendered.append({
-                "slide_number": i + 1,
-                "base64": f"data:image/png;base64,{b64}",
-                "filename": filename
-            })
-
-    # НОВОЕ: Генерация MP4
-    if request.return_format == "video" and temp_dir:
-        video_path = f"videos/{video_id}.mp4"
-
-        try:
-            cmd = [
-                "ffmpeg",
-                "-framerate", "1/3",
-                "-i", f"{temp_dir}/slide_%03d.png",
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                "-y",
-                video_path
-            ]
-
-            result = subprocess.run(cmd, capture_output=True, text=True)
-
-            if result.returncode != 0:
-                raise Exception(f"FFmpeg error: {result.stderr}")
-
-        except FileNotFoundError:
-            raise HTTPException(status_code=500, detail="FFmpeg not installed")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Video generation failed: {str(e)}")
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-        base_url = os.getenv("RAILWAY_PUBLIC_DOMAIN", "localhost:8000")
-        if not base_url.startswith("http"):
-            base_url = f"https://{base_url}"
-
-        return {
-            "success": True,
-            "url": f"{base_url}/video/{video_id}",
-            "slides_count": total_slides,
-            "expires_in": "24h"
-        }
-    else:
-        # ОРИГИНАЛ: Возврат base64
-        return {
-            "success": True,
-            "slides": rendered
-        }
-
-
-@app.get("/video/{video_id}")
-async def get_video(video_id: str):
-    """НОВОЕ: Отдаёт видео по ID"""
-    safe_id = re.sub(r'[^a-zA-Z0-9_\-]', '', video_id)
-    video_path = f"videos/{safe_id}.mp4"
-
-    if not os.path.exists(video_path):
-        raise HTTPException(status_code=404, detail="Video not found or expired")
-
-    return FileResponse(
-        video_path,
-        media_type="video/mp4",
-        headers={"Content-Disposition": f"inline; filename=carousel_{safe_id}.mp4"}
-    )
+    return {
+        "success": True,
+        "slides": rendered
+    }
 
 
 @app.get("/output/{filename}")
 async def get_output(filename: str):
-    # ОРИГИНАЛ
     path = f"output/{filename}"
     if os.path.exists(path):
         return FileResponse(path, media_type="image/png")
