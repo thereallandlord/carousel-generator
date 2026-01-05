@@ -15,7 +15,7 @@
         .sidebar-title{font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px}
         .btn-icon{width:32px;height:32px;background:var(--accent);border:none;border-radius:8px;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600}
         .slides-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
-        .slide-item{position:relative;aspect-ratio:4/5;background:var(--bg-tertiary);border-radius:10px;cursor:pointer;overflow:hidden;border:3px solid transparent;transition:border-color .2s}
+        .slide-item{position:relative;aspect-ratio:4/5;background:var(--bg-tertiary);border-radius:10px;cursor:pointer;overflow:hidden;border:3px solid transparent;transition:border-color .2s;min-height:120px;flex-shrink:0}
         .slide-item:hover{border-color:var(--border)}
         .slide-item.active{border-color:var(--accent)}
         .slide-item.dragging{opacity:.5}
@@ -179,7 +179,7 @@
         const SLIDE_TYPES=[{value:'intro',label:'Intro'},{value:'content',label:'Content'},{value:'ending',label:'Ending'}];
         const API_URL=window.location.origin;
         
-        let state={templateName:'Новый шаблон',settings:{username:'@username',totalSlides:10,endingCount:1},slides:[],currentSlideIndex:0,selectedElementId:null};
+        let state={templateName:'Новый шаблон',settings:{username:'@username',endingCount:1},slides:[],currentSlideIndex:0,selectedElementId:null};
         let isDragging=false,dragOffset={x:0,y:0},isResizing=false,resizeHandle=null,resizeStart={},draggedSlideIndex=null;
         
         function init(){
@@ -239,7 +239,13 @@
         function selectSlide(index){state.currentSlideIndex=index;state.selectedElementId=null;render();}
         function prevSlide(){if(state.currentSlideIndex>0){state.currentSlideIndex--;state.selectedElementId=null;render();}}
         function nextSlide(){if(state.currentSlideIndex<state.slides.length-1){state.currentSlideIndex++;state.selectedElementId=null;render();}}
-        function updateSlideNumbers(){state.slides.forEach((s,i)=>{const n=s.elements.find(e=>e.type==='slidenum');if(n)n.content=`${i+1}/${state.settings.totalSlides}`;});}
+        function updateSlideNumbers(){
+    const total=state.slides.length;
+    state.slides.forEach((s,i)=>{
+        const n=s.elements.find(e=>e.type==='slidenum');
+        if(n)n.content=`${i+1}/${total}`;
+    });
+}
         function updateSlideType(type){state.slides[state.currentSlideIndex].type=type;render();}
         
         function handleSlideDragStart(index,event){draggedSlideIndex=index;event.target.closest('.slide-item').classList.add('dragging');}
@@ -400,7 +406,7 @@
                 }else{
                     let content=el.content||'';
                     if(el.type==='username')content=state.settings.username;
-                    if(el.type==='slidenum')content=`${index+1}/${state.settings.totalSlides}`;
+                    if(el.type==='slidenum')content=`${index+1}/${state.slides.length}`;
                     content=content.replace(/\*([^*]+)\*/g,'$1').substring(0,30);
                     const fs=Math.max(4,el.fontSize*ms);
                     html+=`<div style="position:absolute;left:${el.x*ms}px;top:${el.y*ms}px;font-size:${fs}px;font-weight:${el.fontWeight};color:${el.color};opacity:${(el.opacity||100)/100};white-space:nowrap;overflow:hidden;${el.align==='right'?'transform:translateX(-100%);':''}${el.align==='center'?'transform:translateX(-50%);':''}">${content}</div>`;
@@ -443,7 +449,7 @@
             if(bg.type==='color')html+=`<div class="props-field"><label class="props-label">Цвет</label><div class="props-color-row"><input type="color" class="props-color" value="${bg.color}" onchange="updateBackground('color',this.value)"><input type="text" class="props-color-value" value="${bg.color}" onchange="updateBackground('color',this.value)"></div></div>`;
             else html+=`<div class="props-field"><label class="props-label">Затемнение</label><div class="props-range-row"><input type="range" class="props-range" min="0" max="100" value="${bg.overlay||0}" oninput="this.nextElementSibling.textContent=this.value+'%'" onchange="updateBackground('overlay',parseInt(this.value))"><span class="props-range-value">${bg.overlay||0}%</span></div></div><div class="props-field"><label class="props-label">Тип</label><div class="props-btn-group"><button class="props-btn ${bg.overlayType==='full'?'active':''}" onclick="updateBackground('overlayType','full')">Полное</button><button class="props-btn ${bg.overlayType==='gradient'?'active':''}" onclick="updateBackground('overlayType','gradient')">Градиент</button></div></div>`;
             html+=`</div>`;
-            html+=`<div class="props-section"><div class="props-section-title">Настройки</div><div class="props-field"><label class="props-label">Никнейм</label><input type="text" class="props-input" value="${state.settings.username}" onchange="state.settings.username=this.value;render()"></div><div class="props-row"><div class="props-field"><label class="props-label">Слайдов</label><input type="number" class="props-input" value="${state.settings.totalSlides}" min="1" max="20" onchange="state.settings.totalSlides=parseInt(this.value);updateSlideNumbers();render()"></div><div class="props-field"><label class="props-label">Ending</label><select class="props-select" onchange="state.settings.endingCount=parseInt(this.value)"><option value="1" ${state.settings.endingCount===1?'selected':''}>1</option><option value="2" ${state.settings.endingCount===2?'selected':''}>2</option></select></div></div></div>`;
+            html+=`<div class="props-section"><div class="props-section-title">Настройки</div><div class="props-field"><label class="props-label">Никнейм</label><input type="text" class="props-input" value="${state.settings.username}" onchange="state.settings.username=this.value;render()"></div><div class="props-row"><div class="props-field"><label class="props-label">Ending</label><select class="props-select" onchange="state.settings.endingCount=parseInt(this.value)"><option value="1" ${state.settings.endingCount===1?'selected':''}>1</option><option value="2" ${state.settings.endingCount===2?'selected':''}>2</option></select></div></div></div>`;
             
             if(sel){
                 const isSys=sel.type==='username'||sel.type==='slidenum',isPhoto=sel.type==='photo';
