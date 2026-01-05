@@ -1,5 +1,8 @@
-"""Carousel Studio API v6.1
-Правильная логика: Content посты + Ending слайды из шаблона
+"""Carousel Studio API v6.2
+ПРАВИЛЬНАЯ ЛОГИКА:
+- Первый слайд из slides → INTRO template (с подстановкой)
+- Остальные слайды из slides → CONTENT template (с подстановкой)
+- Ending слайды → как есть из шаблона (БЕЗ подстановки)
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +19,7 @@ import io
 import re
 import uuid
 
-app = FastAPI(title="Carousel Studio", version="6.1")
+app = FastAPI(title="Carousel Studio", version="6.2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -318,7 +321,7 @@ async def index():
 async def health():
     return {
         "status": "healthy",
-        "version": "6.1",
+        "version": "6.2",
         "fonts": os.listdir("fonts") if os.path.exists("fonts") else []
     }
 
@@ -389,9 +392,10 @@ async def render_slide(data: SlideData):
 @app.post("/generate")
 async def generate_carousel(request: GenerateRequest):
     """
-    ПРАВИЛЬНАЯ генерация:
-    1. Рендерим посты из request.slides (с подстановкой данных)
-    2. Добавляем ending слайды из шаблона (как есть)
+    ПРАВИЛЬНАЯ ЛОГИКА v6.2:
+    1. Первый слайд из request.slides → рендерится по INTRO template
+    2. Остальные слайды из request.slides → рендерятся по CONTENT template
+    3. Ending слайды → добавляются в конец (КАК ЕСТЬ из шаблона)
     """
     template_name = request.template_id or request.template_name
     username = request.username or request.USERNAME or "@username"
@@ -410,30 +414,33 @@ async def generate_carousel(request: GenerateRequest):
     settings = template.get('settings', {})
     slides = template.get('slides', [])
 
-    # Находим шаблоны
+    # Разделяем шаблоны
+    intro_slides = [s for s in slides if s.get('type') == 'intro']
     content_slides = [s for s in slides if s.get('type') == 'content']
     ending_slides = [s for s in slides if s.get('type') == 'ending']
 
-    if not content_slides:
-        content_slides = [s for s in slides if s.get('type') != 'ending']
-
+    # Берём шаблоны
+    intro_template = intro_slides[0] if intro_slides else (content_slides[0] if content_slides else slides[0])
     content_template = content_slides[0] if content_slides else slides[0]
 
     result_slides = []
 
     if request.slides:
-        # Считаем ПРАВИЛЬНО
+        # ПРАВИЛЬНЫЙ подсчёт
         total_slides = len(request.slides) + len(ending_slides)
 
-        # 1. Рендерим посты (с подстановкой данных)
+        # Рендерим слайды с подстановкой
         for i, slide_vars in enumerate(request.slides):
-            slide = json.loads(json.dumps(content_template))
+            # Первый слайд → INTRO template, остальные → CONTENT template
+            template_to_use = intro_template if i == 0 else content_template
 
-            # PHOTO для background
+            slide = json.loads(json.dumps(template_to_use))
+
+            # Подстановка PHOTO для background
             if 'PHOTO' in slide_vars and slide.get('background', {}).get('type') == 'photo':
                 slide['background']['photo'] = slide_vars['PHOTO']
 
-            # varName + {VARNAME}_COLOR
+            # Подстановка переменных по varName
             for el in slide.get('elements', []):
                 var_name = el.get('varName', '')
 
@@ -460,7 +467,7 @@ async def generate_carousel(request: GenerateRequest):
 
             result_slides.append(slide)
 
-        # 2. Добавляем ending слайды (КАК ЕСТЬ из шаблона)
+        # Добавляем ending слайды (БЕЗ изменений)
         for ending_slide in ending_slides:
             result_slides.append(json.loads(json.dumps(ending_slide)))
     else:
