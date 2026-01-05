@@ -1,5 +1,5 @@
-"""Carousel Studio API v6 - Photo Only Edition
-Оригинал + динамический SLIDENUM (без видео!)
+"""Carousel Studio API v6.1
+Правильная логика: Content посты + Ending слайды из шаблона
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +16,7 @@ import io
 import re
 import uuid
 
-app = FastAPI(title="Carousel Studio", version="6.0")
+app = FastAPI(title="Carousel Studio", version="6.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,9 +35,9 @@ CANVAS_W, CANVAS_H = 1080, 1350
 
 class GenerateRequest(BaseModel):
     template_name: Optional[str] = None
-    template_id: Optional[str] = None  # Алиас
+    template_id: Optional[str] = None
     USERNAME: Optional[str] = None
-    username: Optional[str] = None  # Алиас
+    username: Optional[str] = None
     slides: Optional[List[Dict[str, Any]]] = None
 
 
@@ -224,7 +224,6 @@ class SlideRenderer:
         if el.get('type') == 'username':
             content = username_override or settings.get('username', '@username')
         elif el.get('type') == 'slidenum':
-            # ЕДИНСТВЕННОЕ УЛУЧШЕНИЕ: динамический подсчёт
             content = f"{slide_num}/{total_slides}"
 
         font = self.get_font(font_family, font_size, font_weight)
@@ -319,7 +318,7 @@ async def index():
 async def health():
     return {
         "status": "healthy",
-        "version": "6.0",
+        "version": "6.1",
         "fonts": os.listdir("fonts") if os.path.exists("fonts") else []
     }
 
@@ -390,10 +389,10 @@ async def render_slide(data: SlideData):
 @app.post("/generate")
 async def generate_carousel(request: GenerateRequest):
     """
-    Генерация ФОТОК для карусели
-    Возвращает массив base64 изображений
+    ПРАВИЛЬНАЯ генерация:
+    1. Рендерим посты из request.slides (с подстановкой данных)
+    2. Добавляем ending слайды из шаблона (как есть)
     """
-    # Поддержка старого и нового формата
     template_name = request.template_id or request.template_name
     username = request.username or request.USERNAME or "@username"
 
@@ -411,30 +410,24 @@ async def generate_carousel(request: GenerateRequest):
     settings = template.get('settings', {})
     slides = template.get('slides', [])
 
+    # Находим шаблоны
+    content_slides = [s for s in slides if s.get('type') == 'content']
+    ending_slides = [s for s in slides if s.get('type') == 'ending']
+
+    if not content_slides:
+        content_slides = [s for s in slides if s.get('type') != 'ending']
+
+    content_template = content_slides[0] if content_slides else slides[0]
+
     result_slides = []
 
     if request.slides:
-        # Оригинальная логика intro/content/ending
-        intro_slides = [s for s in slides if s.get('type') == 'intro']
-        content_slides = [s for s in slides if s.get('type') == 'content']
-        ending_slides = [s for s in slides if s.get('type') == 'ending']
+        # Считаем ПРАВИЛЬНО
+        total_slides = len(request.slides) + len(ending_slides)
 
-        if not content_slides:
-            content_slides = [s for s in slides if s.get('type') != 'ending']
-
-        # УЛУЧШЕНИЕ: Динамический подсчёт
-        total_slides = len(request.slides) + len(intro_slides) + len(ending_slides)
-
+        # 1. Рендерим посты (с подстановкой данных)
         for i, slide_vars in enumerate(request.slides):
-            if i == 0 and intro_slides:
-                base_slide = intro_slides[0]
-            elif ending_slides and i >= len(request.slides) - len(ending_slides):
-                idx = i - (len(request.slides) - len(ending_slides))
-                base_slide = ending_slides[idx] if idx < len(ending_slides) else content_slides[0]
-            else:
-                base_slide = content_slides[0]
-
-            slide = json.loads(json.dumps(base_slide))
+            slide = json.loads(json.dumps(content_template))
 
             # PHOTO для background
             if 'PHOTO' in slide_vars and slide.get('background', {}).get('type') == 'photo':
@@ -466,11 +459,15 @@ async def generate_carousel(request: GenerateRequest):
                     el['highlightColor'] = color_value
 
             result_slides.append(slide)
+
+        # 2. Добавляем ending слайды (КАК ЕСТЬ из шаблона)
+        for ending_slide in ending_slides:
+            result_slides.append(json.loads(json.dumps(ending_slide)))
     else:
         result_slides = slides
         total_slides = len(slides)
 
-    # Рендерим ФОТКИ
+    # Рендерим все слайды
     rendered = []
 
     for i, slide in enumerate(result_slides):
