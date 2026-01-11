@@ -490,8 +490,9 @@ async def generate_carousel(request: GenerateRequest):
 
         rendered.append({
             "slide_number": i + 1,
-            "base64": f"data:image/png;base64,{b64}",
-            "filename": filename
+            "url": f"https://carousel-generator-production.up.railway.app/output/{filename}",
+            "filename": filename,
+            "base64": f"data:image/png;base64,{b64}"  # оставь на случай, если понадобится
         })
 
     return {
